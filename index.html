@@ -820,13 +820,40 @@ function cleanData(raw) {
     var agente = String(r.Nome_Agente || '').trim();
     var categoria = String(r.Descr_Cat_Cli || '').trim();
     var stato = String(r.Stato || '').trim();
+    var prov = String(r.Prov || r.Provincia || r.Sigla_Provincia || '').trim();
     var anno = parseInt(r.Anno);
     if (anno !== 2025 && anno !== 2026) continue;
     
+    var agU = agente.toUpperCase();
+    var isTest = false;
+
     // Fix: normalizza Show Wine → Avvina (stessa agenzia, cambio ragione sociale)
-    // "SHOW WINE SRL - BS" (2025) viene unificato a "AVVINA..." (2026)
-    if (agente.toUpperCase().indexOf('SHOW WINE') !== -1) {
+    if (agU.indexOf('SHOW WINE') !== -1) {
       agente = 'AVVINA DI PEDERSINI M. E BERTAZZOLI F. SNC - BS';
+    }
+    // Fix: Di Cino Angelo è diventato Basile Costantino (stesso territorio SO, passaggio a metà 2026)
+    else if (agU.indexOf('DI CINO ANGELO') !== -1) {
+      agente = 'BASILE COSTANTINO - SO';
+    }
+    // Agenzia di Prova: dati di test, da escludere del tutto (nessun canale, nessun banner)
+    else if (agU.indexOf('AGENZIA DI PROVA') !== -1) {
+      isTest = true;
+    }
+    // Meneghelli Marco - VR: agente non più attivo, fatturato residuo mantenuto ma sotto territorio vacante
+    else if (agU.indexOf('MENEGHELLI') !== -1) {
+      agente = 'VACANT VERONA';
+    }
+    // Palladino Antonio: territorio FG e provincia
+    else if (agU === 'PALLADINO ANTONIO') {
+      agente = 'PALLADINO ANTONIO - FG';
+    }
+    // Quaranta Michelangelo: le due varianti si uniscono in BA+BAT; i clienti BR/TA passano a Calia
+    else if (agU.indexOf('QUARANTA MICHELANGELO') !== -1) {
+      if (prov === 'BR' || prov === 'TA') {
+        agente = 'CALIA ALESSANDRO- BR -TA';
+      } else {
+        agente = 'QUARANTA MICHELANGELO - BA+BAT';
+      }
     }
     
     // Escludi merceologica FONTECOLO (non è bottiglia da conteggiare nelle vendite)
@@ -834,6 +861,7 @@ function cleanData(raw) {
     if (merceoCheck === 'FONTECOLO') continue;
     
     var canale = classificaCanale(agente, stato, categoria, parseInt(r.Cod_Cli));
+    if (isTest) canale = 'TEST';
 
     // Rietichetta l'agente per la visualizzazione, in base al canale assegnato
     if (canale === 'NEGOZIO') {
@@ -861,7 +889,6 @@ function cleanData(raw) {
     var tipoRiga = (tipoDoc === 'N.Acc.' || tipoDoc === 'F.Acc.') ? 'Accredito' : 'Vendita';
     
     var citta = String(r.Citta || r.Città || r.Comune || r.Localita || r.Località || '').trim();
-    var prov = String(r.Prov || r.Provincia || r.Sigla_Provincia || '').trim();
     
     // Leggi formato dalla colonna Q
     var formato = '';
