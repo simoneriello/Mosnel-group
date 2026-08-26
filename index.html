@@ -408,20 +408,35 @@ function showHome() {
   renderHome();
 }
 
-function ytdCutoffFatt(rows, canale, anno) {
-  var oggi = new Date();
-  var cutoffMD = (oggi.getMonth()+1) * 100 + oggi.getDate();
+// Trova l'ultima data disponibile nel 2026 per un canale (stessa logica di getPeriodoFilter/YTD)
+function getMaxDate2026(canale) {
+  var maxMese = 0, maxGiorno = 0;
+  for (var i = 0; i < D_ALL.length; i++) {
+    var r = D_ALL[i];
+    if (r.canale !== canale) continue;
+    if (r.anno !== 2026) continue;
+    if (r.mese > maxMese || (r.mese === maxMese && r.giorno > maxGiorno)) {
+      maxMese = r.mese; maxGiorno = r.giorno;
+    }
+  }
+  if (maxMese === 0) maxMese = 12;
+  return {mese: maxMese, giorno: maxGiorno || 31};
+}
+
+function ytdCutoffFatt(rows, canale, anno, cutoff) {
   var fatt = 0, clienti = {}, btlEq = 0;
   for (var i = 0; i < rows.length; i++) {
     var r = rows[i];
     if (r.canale !== canale) continue;
     if (r.anno !== anno) continue;
+    if (r.tipoRiga !== 'Vendita') continue; // esclude accrediti/note di credito, come nel report
+    if (!isRigaFatturato(r)) continue; // esclude righe descrittive/non fatturabili, come nel report
     if (anno !== 2026) {
-      var md = r.mese * 100 + r.giorno;
-      if (md > cutoffMD) continue;
+      // Stesso cutoff usato per il periodo YTD nel report di dettaglio (ultima data reale nel 2026)
+      if (r.mese > cutoff.mese || (r.mese === cutoff.mese && r.giorno > cutoff.giorno)) continue;
     }
     fatt += r.importo;
-    btlEq += r.pezziEq;
+    if (isRigaBottiglia(r)) btlEq += r.pezziEq;
     if (r.cliente) clienti[r.cliente] = true;
   }
   return {fatt: fatt, btlEq: btlEq, clienti: Object.keys(clienti).length};
@@ -433,8 +448,9 @@ function renderHome() {
   var totFatt26 = 0, totFatt25 = 0;
   for (var i = 0; i < canali.length; i++) {
     var c = canali[i];
-    var d26 = ytdCutoffFatt(D_ALL, c, 2026);
-    var d25 = ytdCutoffFatt(D_ALL, c, 2025);
+    var cutoff = getMaxDate2026(c);
+    var d26 = ytdCutoffFatt(D_ALL, c, 2026, cutoff);
+    var d25 = ytdCutoffFatt(D_ALL, c, 2025, cutoff);
     dati[c] = {d26: d26, d25: d25};
     totFatt26 += d26.fatt;
     totFatt25 += d25.fatt;
