@@ -441,12 +441,12 @@ function renderHome() {
   }
   var varTot = totFatt25 ? (totFatt26 - totFatt25) / totFatt25 * 100 : 0;
 
-  // VUOTO: totale non filtrato per periodo, solo somma 25+26 come promemoria
-  var vuotoFatt = 0, vuotoClienti = {};
+  // ESCLUSO: cliente 597 (Agriturismo Il Mosnel, parte correlata) - promemoria, non un canale
+  var esclusoFatt = 0, esclusoClienti = {};
   for (var i = 0; i < D_ALL.length; i++) {
-    if (D_ALL[i].canale === 'VUOTO') {
-      vuotoFatt += D_ALL[i].importo;
-      if (D_ALL[i].cliente) vuotoClienti[D_ALL[i].cliente] = true;
+    if (D_ALL[i].canale === 'ESCLUSO') {
+      esclusoFatt += D_ALL[i].importo;
+      if (D_ALL[i].cliente) esclusoClienti[D_ALL[i].cliente] = true;
     }
   }
 
@@ -484,10 +484,10 @@ function renderHome() {
   '</div>' +
   '<div class="home-cards">' + cards + '</div>';
 
-  if (vuotoFatt > 0) {
+  if (esclusoFatt > 0) {
     html += '<div class="home-vuoto-banner">' +
-      '<div>Agente VUOTO parcheggiato: ' + EUR0(vuotoFatt) + ' (2025+2026), ' + Object.keys(vuotoClienti).length + ' clienti — non conteggiato in nessun canale in attesa di classificazione.</div>' +
-      '<div class="home-vuoto-tag">Da chiarire</div>' +
+      '<div>Agriturismo Il Mosnel (parte correlata, cliente 597): ' + EUR0(esclusoFatt) + ' (2025+2026), ' + Object.keys(esclusoClienti).length + ' clienti — escluso da tutti i canali.</div>' +
+      '<div class="home-vuoto-tag">Non conteggiato</div>' +
     '</div>';
   }
 
@@ -759,15 +759,32 @@ checkLastFileOnLoad();
 // Stati italiani-equivalenti: San Marino e Città del Vaticano contano come mercato Italia
 var STATI_ITALIA_LIKE = {'_Italia': true, 'San Marino': true, 'Città del Vaticano': true};
 
-// Determina il canale (HORECA, ESTERO, NEGOZIO, VUOTO, AUTOCONSUMO) per una riga già pulita
-function classificaCanale(agente, stato, categoria) {
+// Categorie ex-VUOTO che vanno in Negozio (le altre confluiscono in Horeca Italia)
+var VUOTO_CAT_NEGOZIO = {
+  'CLIENTI AGRITURISMO': true, 'ALTRO': true, 'DITTE': true,
+  'PRIVATO': true, 'SCONTRINO': true, 'WINE CLUB': true
+};
+
+// Determina il canale (HORECA, ESTERO, NEGOZIO, VUOTO, AUTOCONSUMO, ESCLUSO) per una riga già pulita
+function classificaCanale(agente, stato, categoria, codCli) {
   var agU = String(agente || '').toUpperCase();
+  // Cliente 597 = Agriturismo Il Mosnel stesso: parte correlata, non conta in nessun canale
+  if (codCli === 597) return 'ESCLUSO';
   if (agente === 'AUTOCONSUMO' || categoria === 'AUTOCONSUMO') return 'AUTOCONSUMO';
   if (agU.indexOf('A.C. MARKETING') !== -1 || agU.indexOf('AC MARKETING') !== -1) return 'ESTERO';
   // PV e Wine Club sono sempre Negozio, anche se la riga riporta uno Stato estero
   // (es. accrediti/resi verso clienti esteri gestiti dal punto vendita)
   if (agente === 'PV' || agente === 'WINE CLUB' || categoria === 'WINE CLUB') return 'NEGOZIO';
-  if (agente === 'VUOTO') return 'VUOTO';
+  if (agente === 'VUOTO') {
+    // Righe con Stato estero sotto VUOTO: seguono il canale Negozio (indicazione esplicita)
+    if (!STATI_ITALIA_LIKE[stato]) return 'NEGOZIO';
+    var catU = String(categoria || '').toUpperCase();
+    if (VUOTO_CAT_NEGOZIO[catU]) return 'NEGOZIO';
+    // Il resto (AGRITURISMO, ENOTECA, GROSSISTA, RISTOR., BAR, HOTEL, ALIMENTARE,
+    // PASTICCERIA-GELATERIA, CATERING, GASTRONOMIA, MACELLERIA, MONDO NOTTE,
+    // AGENTI DI COMMERCIO, STABILIMENTO BALNEARE, ENOTECA ONLINE, ecc.) -> Horeca Italia
+    return 'HORECA';
+  }
   if (!STATI_ITALIA_LIKE[stato]) return 'ESTERO';
   return 'HORECA';
 }
@@ -800,7 +817,21 @@ function cleanData(raw) {
     var merceoCheck = String(r.Descr_Merceologica || '').toUpperCase().trim();
     if (merceoCheck === 'FONTECOLO') continue;
     
-    var canale = classificaCanale(agente, stato, categoria);
+    var canale = classificaCanale(agente, stato, categoria, parseInt(r.Cod_Cli));
+
+    // Rietichetta l'agente per la visualizzazione, in base al canale assegnato
+    if (canale === 'NEGOZIO') {
+      if (agente === 'PV') {
+        agente = 'Punto Vendita';
+      } else if (agente === 'WINE CLUB' || categoria === 'WINE CLUB') {
+        agente = 'Wine Club';
+      } else if (agente === 'VUOTO') {
+        agente = 'Vuoto Negozio';
+      }
+    } else if (canale === 'HORECA' && agente === 'VUOTO') {
+      // Prefisso Z_ per farlo comparire in fondo all'elenco agenti (ordine alfabetico)
+      agente = 'Z_Agente Vuoto';
+    }
     
     var mese = 0, giorno = 0;
     var d = r.Data_Doc;
