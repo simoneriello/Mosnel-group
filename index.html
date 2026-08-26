@@ -855,6 +855,11 @@ function cleanData(raw) {
         agente = 'QUARANTA MICHELANGELO - BA+BAT';
       }
     }
+    // Agenti cessati (fatturato 2025 storico, nessuna vendita 2026): restano classificati
+    // normalmente (quasi sempre Horeca) ma vengono rietichettati come Z_Agente Vuoto più sotto
+    var isCessato = (agU.indexOf('CESCHELLI') !== -1 || agU.indexOf('DE GIUDICI') !== -1 ||
+                      agU === 'MARTINO LUCA' || agU.indexOf('PACE ROBERTO') !== -1 ||
+                      agU.indexOf('PUGLIESE MASSIMO') !== -1 || agU === 'PV-AGR.');
     
     // Escludi merceologica FONTECOLO (non è bottiglia da conteggiare nelle vendite)
     var merceoCheck = String(r.Descr_Merceologica || '').toUpperCase().trim();
@@ -874,6 +879,8 @@ function cleanData(raw) {
       }
     } else if (canale === 'HORECA' && agente === 'VUOTO') {
       // Prefisso Z_ per farlo comparire in fondo all'elenco agenti (ordine alfabetico)
+      agente = 'Z_Agente Vuoto';
+    } else if (isCessato) {
       agente = 'Z_Agente Vuoto';
     }
     
