@@ -865,11 +865,19 @@ function cleanData(raw) {
     var merceoCheck = String(r.Descr_Merceologica || '').toUpperCase().trim();
     if (merceoCheck === 'FONTECOLO') continue;
     
+    var tipoDoc = String(r.Tipo_Doc || '').trim();
+
     var canale = classificaCanale(agente, stato, categoria, parseInt(r.Cod_Cli));
     if (isTest) canale = 'TEST';
 
+    // Fatture accompagnatorie (F.Acc., Cod_Age 999): vendite del punto vendita.
+    // Vanno sotto il canale Negozio con agente dedicato 999PV.
+    if (tipoDoc === 'F.Acc.' && canale !== 'TEST' && canale !== 'AUTOCONSUMO' && canale !== 'ESCLUSO') {
+      canale = 'NEGOZIO';
+      agente = '999PV';
+    }
     // Rietichetta l'agente per la visualizzazione, in base al canale assegnato
-    if (canale === 'NEGOZIO') {
+    else if (canale === 'NEGOZIO') {
       if (agente === 'PV') {
         agente = 'Punto Vendita';
       } else if (agente === 'WINE CLUB' || categoria === 'WINE CLUB') {
@@ -892,8 +900,11 @@ function cleanData(raw) {
     else if (typeof d === 'string') { var p = new Date(d); if (!isNaN(p.getTime())) { mese = p.getMonth() + 1; giorno = p.getDate(); dataStr = formatDate(p); dataISO = isoDate(p); } }
     else if (typeof d === 'number') { var b = new Date(1899, 11, 30); b.setDate(b.getDate() + Math.floor(d)); mese = b.getMonth() + 1; giorno = b.getDate(); dataStr = formatDate(b); dataISO = isoDate(b); }
     
-    var tipoDoc = String(r.Tipo_Doc || '').trim();
-    var tipoRiga = (tipoDoc === 'N.Acc.' || tipoDoc === 'F.Acc.') ? 'Accredito' : 'Vendita';
+    // Tutti i tipi documento concorrono al fatturato:
+    // - F.Acc. (fattura accompagnatoria) è una vendita reale, importi positivi
+    // - N.Acc. (nota di credito) ha importi negativi e viene quindi sottratta correttamente
+    // Il tipo documento originale resta disponibile in tipoDoc per eventuali KPI separati.
+    var tipoRiga = 'Vendita';
     
     var citta = String(r.Citta || r.Città || r.Comune || r.Localita || r.Località || '').trim();
     
