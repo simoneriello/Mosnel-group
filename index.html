@@ -625,24 +625,25 @@ var REFERENZE = REFERENZE_NAMES.map(function(n) { return { name: n }; });
 //   null          → riga da ESCLUDERE totalmente (FONTECOLO, storni IVA, righe descrittive)
 //   'Accessori'   → accessori/packaging (astucci, cofanetti, cassette): NON sono bottiglie
 //   altrimenti    → nome categoria referenza (Brut, Pas Dosé, ...) o 'Altro'
-function classificaReferenza(merceo, articolo) {
+function classificaReferenza(merceo, articolo, tipoDoc) {
   var m = String(merceo || '').toUpperCase().trim();
   var a = String(articolo || '').toUpperCase().trim();
+  var td = String(tipoDoc || '').trim();
   
   // Escludi FONTECOLO (non è bottiglia conteggiata)
   if (m === 'FONTECOLO') return null;
   
-  // --- FIX 1: escludi righe rumorose (storni IVA, addebiti, righe descrittive) ---
-  // Storni e rettifiche IVA
-  if (a.indexOf('STORNO') !== -1) return null;
-  if (a.indexOf('EX ART') !== -1) return null;
-  if (a.indexOf('RIVALSA') !== -1) return null;
-  if (a.indexOf('ADDEBITO') !== -1) return null;
-  if (a.indexOf('DPR 633') !== -1) return null;
-  // Righe puramente descrittive (es. "DEL 14/05/2025", "1 BT DI BRUT", "6 BT DI SATEN")
-  // Pattern: iniziano con "N BT" oppure "DEL "
-  if (/^\d+\s*BT/.test(a)) return null;       // "1 BT DI BRUT", "2BT DI BRUT", "6 BT DI ROSE'"
-  if (/^DEL\s/.test(a)) return null;          // "DEL 14/05/2025"
+  // --- Righe da NON conteggiare: meccanica contabile dell'omaggio senza rivalsa IVA ---
+  // Dentro una FATTURA, le righe "STORNO OMAGGI SENZA RIVALSA IVA" e "EX ART. 18 DPR 633/72"
+  // servono ad azzerare in fattura il valore dell'omaggio: conteggiarle creerebbe doppio conteggio.
+  // Nelle NOTE DI CREDITO (N.Acc.) invece lo storno è una rettifica reale di fatturato
+  // (es. errata imputazione sconto, merce mai consegnata) e va conteggiato.
+  if (td === 'Fatt.') {
+    if (a.indexOf('STORNO') !== -1) return null;
+    if (a.indexOf('EX ART') !== -1) return null;
+    if (a.indexOf('RIVALSA') !== -1) return null;
+    if (a.indexOf('DPR 633') !== -1) return null;
+  }
   
   // --- FIX 4: riconosci ACCESSORI / PACKAGING dal nome articolo ---
   // Questi generano fatturato ma NON sono bottiglie: categoria separata.
@@ -686,12 +687,12 @@ function classificaReferenza(merceo, articolo) {
 
 // True se la riga di vendita rappresenta bottiglie reali (esclude accessori e righe rumorose).
 function isRigaBottiglia(v) {
-  var ref = classificaReferenza(v.tipologia, v.articolo);
+  var ref = classificaReferenza(v.tipologia, v.articolo, v.tipoDoc);
   return ref !== null && ref !== 'Accessori';
 }
 // True se la riga genera fatturato valido (esclude solo storni/righe descrittive, INCLUDE accessori).
 function isRigaFatturato(v) {
-  return classificaReferenza(v.tipologia, v.articolo) !== null;
+  return classificaReferenza(v.tipologia, v.articolo, v.tipoDoc) !== null;
 }
 
 function EUR(n) { return new Intl.NumberFormat('it-IT', {style:'currency', currency:'EUR', minimumFractionDigits:2, maximumFractionDigits:2}).format(n); }
@@ -1204,7 +1205,7 @@ function calcolaReferenze(vendite) {
   for (var i = 0; i < vendite.length; i++) {
     var v = vendite[i];
     // Classifica usando la merceologica del gestionale (v.tipologia) + articolo
-    var ref = classificaReferenza(v.tipologia, v.articolo);
+    var ref = classificaReferenza(v.tipologia, v.articolo, v.tipoDoc);
     // ref può essere null se FONTECOLO → escluso dal conteggio referenze
     if (ref === null) continue;
     if (!refs[ref]) refs[ref] = { fatt: 0, btl: 0, btlEq: 0 };
@@ -1259,7 +1260,7 @@ function calcolaFormati(vendite) {
   
   for (var i = 0; i < vendite.length; i++) {
     var v = vendite[i];
-    var ref = classificaReferenza(v.tipologia, v.articolo);
+    var ref = classificaReferenza(v.tipologia, v.articolo, v.tipoDoc);
     if (ref === null) continue; // FONTECOLO escluso
     if (ref === 'Accessori') continue; // accessori esclusi dalla matrice formati (non sono bottiglie)
     var fmt = normalizzaFormato(v.formato, v.articolo);
