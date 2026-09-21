@@ -178,6 +178,8 @@ tr.clik{cursor:pointer}
 .text-red{color:var(--red)}
 .text-muted{color:var(--muted)}
 tr.tot-row td{background:#faf7f7;font-weight:700;border-top:2px solid var(--wine);border-bottom:none;color:var(--ink)}
+tr.ord-hl td{background:#fdf3d9;border-left:3px solid var(--gold)}
+tr.ord-hl:hover td{background:#fbecc6}
 
 /* Vendite per formato — sezione dedicata */
 .fmt-cards-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
@@ -1507,7 +1509,7 @@ function renderReport() {
   
   var html = '';
   html += '<div class="report-header"><div><h1>' + escapeHTML(vistaLabel(r.vista)) + '</h1><p>' + r.anno + ' vs ' + r.annoP + ' · ' + escapeHTML(r.periodo.label) + '</p></div>';
-  html += '<div class="report-actions"><button onclick="exportReportExcel()">Excel</button><button onclick="exportReportPdf()">PDF</button><button onclick="exportMultiPeriodoPdf()" title="Esporta un PDF con due sezioni: periodo selezionato + YTD">PDF Multi-periodo</button></div></div>';
+  html += '<div class="report-actions"><button onclick="exportReportExcel()">Excel</button><button onclick="exportReportPdf()">PDF</button><button onclick="exportMultiPeriodoPdf()" title="Esporta un PDF con due sezioni: periodo selezionato + YTD">PDF Multi-periodo</button>' + (!r.isItalia ? '<button onclick="openOrdiniAgente()" title="Storico completo ordini di tutti i clienti di questo agente">Ordini</button>' : '') + '</div></div>';
   
   // KPI principali: 4 card simmetriche — Fatturato · Bottiglie · Prezzo Medio · Ordini
   var dOrd = r.d25.ordini > 0 ? ((r.d26.ordini - r.d25.ordini) / r.d25.ordini) * 100 : 0;
@@ -2275,6 +2277,8 @@ function renderFV() {
     renderFVLista(state);
   } else if (state.type === 'cliente') {
     renderFVCliente(state);
+  } else if (state.type === 'ordini') {
+    renderFVOrdini(state);
   }
   
   document.getElementById('fv').classList.add('open');
@@ -2527,6 +2531,246 @@ function renderFVCliente(state) {
     initSort('fv-fat-tbl');
     initResize('fv-fat-tbl');
   }, 50);
+}
+
+// ===== ORDINI PER AGENTE (storico completo, tutti i clienti) =====
+
+function openOrdiniAgente() {
+  var agente = lastReport.vista;
+  var fatture = {};
+  for (var i = 0; i < D.length; i++) {
+    if (D[i].agente !== agente) continue;
+    if (D[i].tipoRiga !== 'Vendita') continue;
+    var key = D[i].numDoc + '|' + D[i].dataStr;
+    if (!fatture[key]) fatture[key] = { numDoc: D[i].numDoc, cliente: D[i].cliente, citta: D[i].citta, data: D[i].dataStr, dataISO: D[i].dataISO, importo: 0, pezzi: 0, pezziEq: 0 };
+    fatture[key].importo += D[i].importo;
+    if (isRigaBottiglia(D[i])) { fatture[key].pezzi += D[i].pezzi; fatture[key].pezziEq += D[i].pezziEq; }
+  }
+  var ordini = Object.values(fatture).sort(function(a, b) { return (a.dataISO < b.dataISO) ? 1 : -1; });
+
+  // Salva snapshot della vista corrente prima di aprire FV (stesso meccanismo di openFV)
+  window._mainSnapshot = {
+    vista: lastReport.vista,
+    anno: lastReport.anno,
+    periodoMode: document.getElementById('periodo').value,
+    meseDa: document.getElementById('mese-da').value,
+    meseA: document.getElementById('mese-a').value,
+    domOrder: readTableOrder('main-tbl', lastReport.tutti),
+    sortStates: JSON.parse(JSON.stringify(sortStates)),
+    scrollY: document.querySelector('.content').scrollTop || 0
+  };
+
+  fvStack = [];
+  showFV({ type: 'ordini', agente: agente, data: ordini });
+}
+
+function renderFVOrdini(state) {
+  var agente = state.agente;
+  var all = state.data;
+
+  window._fvData = null;
+  window._fvType = 'ordini';
+  window._fvOrdiniAgente = agente;
+  window._fvOrdiniAll = all;
+  window._fvOrdiniFiltered = all;
+
+  document.getElementById('fv-bc').textContent = 'Ordini · ' + agente;
+
+  var html = '<div class="fv-title">Ordini — ' + escapeHTML(agente) + '</div>';
+  html += '<div class="fv-sub">Storico completo ordini di tutti i clienti dell\'agente (tutte le date) · ' + all.length + ' ordini totali</div>';
+
+  html += '<div class="kpi-row" id="ordini-kpi-row">' + buildOrdiniKpiRow(all, '', 0) + '</div>';
+
+  html += '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin:4px 0 14px">';
+  html += '<div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">Da</label><input type="date" id="ord-da" onchange="filtraOrdini()" style="padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:13px"></div>';
+  html += '<div><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">A</label><input type="date" id="ord-a" onchange="filtraOrdini()" style="padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:13px"></div>';
+  html += '<div style="flex:1;min-width:180px"><label style="font-size:11px;color:var(--muted);display:block;margin-bottom:3px">Cerca cliente / città</label><input type="text" id="ord-search" oninput="filtraOrdini()" placeholder="Cerca..." style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:13px"></div>';
+  html += '<div><button onclick="resetFiltriOrdini()" style="padding:7px 12px;border:1px solid var(--border);background:#fff;border-radius:6px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;color:var(--muted)">Azzera filtri</button></div>';
+  html += '</div>';
+
+  html += '<div style="display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin-bottom:16px;padding:10px 14px;background:var(--wine-light);border-radius:8px;border:1px solid var(--border)">';
+  html += '<label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--wine);cursor:pointer"><input type="checkbox" id="ord-evid" onchange="filtraOrdini()"> Evidenzia periodo affiancamento</label>';
+  html += '<div style="display:flex;align-items:center;gap:6px"><label style="font-size:11px;color:var(--muted)">dal</label><input type="date" id="ord-aff-da" onchange="filtraOrdini()" style="padding:5px 7px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:13px"></div>';
+  html += '<div style="display:flex;align-items:center;gap:6px"><label style="font-size:11px;color:var(--muted)">al</label><input type="date" id="ord-aff-a" onchange="filtraOrdini()" style="padding:5px 7px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:13px"></div>';
+  html += '</div>';
+
+  html += '<div id="ordini-table-wrap">' + buildOrdiniTable(all, false, '', '') + '</div>';
+
+  document.getElementById('fv-body').innerHTML = html;
+
+  setTimeout(function() {
+    filtraOrdini();
+  }, 50);
+}
+
+function buildOrdiniKpiRow(list, periodoTxt, nAffianc) {
+  var tot = 0, btlEq = 0;
+  for (var i = 0; i < list.length; i++) { tot += list[i].importo; btlEq += list[i].pezziEq; }
+
+  var all = window._fvOrdiniAll || list;
+  var ultimoTxt = '—', ultimoSub = 'nessun ordine';
+  if (all.length) {
+    ultimoTxt = all[0].data;
+    var giorni = Math.round((new Date() - new Date(all[0].dataISO)) / 86400000);
+    ultimoSub = giorni === 0 ? 'oggi' : (giorni === 1 ? '1 giorno fa' : giorni + ' giorni fa');
+  }
+
+  var html = '';
+  html += '<div class="kpi-card"><div class="kpi-label">Ultimo ordine effettuato</div><div class="kpi-value" style="font-size:1.25rem">' + escapeHTML(ultimoTxt) + '</div><div class="kpi-sub">' + escapeHTML(ultimoSub) + '</div></div>';
+  html += '<div class="kpi-card"><div class="kpi-label">Ordini visualizzati</div><div class="kpi-value">' + list.length + '</div><div class="kpi-sub">' + EUR(tot) + ' · ' + NUM(btlEq) + ' bott.</div></div>';
+  html += '<div class="kpi-card"><div class="kpi-label">Periodo affiancamento</div><div class="kpi-value" style="font-size:1.1rem">' + escapeHTML(periodoTxt || 'non impostato') + '</div><div class="kpi-sub">imposta le date qui sotto</div></div>';
+  html += '<div class="kpi-card"><div class="kpi-label">Ordini nel periodo affiancamento</div><div class="kpi-value">' + (nAffianc || 0) + '</div><div class="kpi-sub">su ' + all.length + ' totali</div></div>';
+  return html;
+}
+
+function formatItDateISO(iso) {
+  if (!iso) return '';
+  var p = iso.split('-');
+  return p.length === 3 ? (p[2] + '/' + p[1] + '/' + p[0]) : iso;
+}
+
+function filtraOrdini() {
+  var all = window._fvOrdiniAll || [];
+  var da = document.getElementById('ord-da').value;
+  var a = document.getElementById('ord-a').value;
+  var q = (document.getElementById('ord-search').value || '').toLowerCase();
+  var evid = document.getElementById('ord-evid').checked;
+  var affDa = document.getElementById('ord-aff-da').value;
+  var affA = document.getElementById('ord-aff-a').value;
+
+  var filtered = [];
+  for (var i = 0; i < all.length; i++) {
+    var o = all[i];
+    if (da && o.dataISO < da) continue;
+    if (a && o.dataISO > a) continue;
+    if (q && o.cliente.toLowerCase().indexOf(q) === -1 && (o.citta || '').toLowerCase().indexOf(q) === -1) continue;
+    filtered.push(o);
+  }
+
+  var nAffianc = 0;
+  if (affDa && affA) {
+    for (var i = 0; i < all.length; i++) {
+      if (all[i].dataISO >= affDa && all[i].dataISO <= affA) nAffianc++;
+    }
+  }
+  var periodoTxt = (affDa && affA) ? (formatItDateISO(affDa) + ' — ' + formatItDateISO(affA)) : '';
+
+  window._fvOrdiniFiltered = filtered;
+
+  document.getElementById('ordini-kpi-row').innerHTML = buildOrdiniKpiRow(filtered, periodoTxt, nAffianc);
+  document.getElementById('ordini-table-wrap').innerHTML = buildOrdiniTable(filtered, evid, affDa, affA);
+
+  setTimeout(function() {
+    initSort('ord-tbl');
+    initResize('ord-tbl');
+  }, 50);
+}
+
+function resetFiltriOrdini() {
+  document.getElementById('ord-da').value = '';
+  document.getElementById('ord-a').value = '';
+  document.getElementById('ord-search').value = '';
+  document.getElementById('ord-evid').checked = false;
+  document.getElementById('ord-aff-da').value = '';
+  document.getElementById('ord-aff-a').value = '';
+  filtraOrdini();
+}
+
+function buildOrdiniTable(list, evid, affDa, affA) {
+  var html = '<div class="table-wrap"><div class="table-scroll"><table id="ord-tbl">';
+  html += '<thead><tr>';
+  html += '<th data-col="0" data-type="str">Data <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+  html += '<th data-col="1" data-type="str">Cliente <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+  html += '<th data-col="2" data-type="str">Città <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+  html += '<th data-col="3" data-type="str">N. Doc <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+  html += '<th data-col="4" data-type="num" class="text-right">Bottiglie <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
+  html += '<th data-col="5" data-type="num" class="text-right">Importo <span class="sort-arrow">▼</span></th>';
+  html += '</tr></thead><tbody>';
+
+  var totImp = 0, totBtl = 0;
+  for (var i = 0; i < list.length; i++) {
+    var o = list[i];
+    totImp += o.importo; totBtl += o.pezziEq;
+    var hl = evid && affDa && affA && o.dataISO >= affDa && o.dataISO <= affA;
+    html += '<tr' + (hl ? ' class="ord-hl"' : '') + '>';
+    html += '<td>' + escapeHTML(o.data) + '</td>';
+    html += '<td>' + escapeHTML(o.cliente) + '</td>';
+    html += '<td class="text-muted">' + escapeHTML(o.citta || '') + '</td>';
+    html += '<td class="text-muted">' + escapeHTML(o.numDoc) + '</td>';
+    html += '<td class="text-right">' + NUM(o.pezziEq) + '</td>';
+    html += '<td class="text-right">' + EUR(o.importo) + '</td>';
+    html += '</tr>';
+  }
+  if (!list.length) {
+    html += '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">Nessun ordine trovato per i filtri selezionati</td></tr>';
+  } else {
+    html += '<tr class="tot-row"><td>TOTALE</td><td></td><td></td><td></td><td class="text-right">' + NUM(totBtl) + '</td><td class="text-right">' + EUR(totImp) + '</td></tr>';
+  }
+  html += '</tbody></table></div></div>';
+  return html;
+}
+
+function exportOrdiniExcel() {
+  var list = window._fvOrdiniFiltered || window._fvOrdiniAll || [];
+  var wb = XLSX.utils.book_new();
+  var rows = [['Data', 'Cliente', 'Città', 'N. Doc', 'Bottiglie', 'Importo']];
+  for (var i = 0; i < list.length; i++) {
+    var o = list[i];
+    rows.push([o.data, o.cliente, o.citta || '', o.numDoc, Math.round(o.pezziEq * 100) / 100, o.importo]);
+  }
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows), 'Ordini');
+  saveXlsx(wb, 'Mosnel_Ordini_' + String(window._fvOrdiniAgente || '').substr(0, 30) + '.xlsx');
+}
+
+function exportOrdiniPdf() {
+  var list = window._fvOrdiniFiltered || window._fvOrdiniAll || [];
+  var doc = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  var pageW = 297, pageH = 210, margin = 14;
+
+  var rFake = {
+    vista: 'Ordini - ' + window._fvOrdiniAgente,
+    anno: lastReport.anno,
+    annoP: lastReport.annoP,
+    periodo: { label: list.length + ' ordini' }
+  };
+  drawHeader(doc, rFake, pageW);
+
+  var y = 30;
+  drawSectionTitle(doc, 'Elenco ordini (' + list.length + ')', margin, y);
+  y += 5;
+
+  var totImp = 0, totBtl = 0;
+  var body = [];
+  for (var i = 0; i < list.length; i++) {
+    var o = list[i];
+    totImp += o.importo; totBtl += o.pezziEq;
+    body.push([o.data, o.cliente, o.citta || '', o.numDoc, NUM(o.pezziEq), EURpdf(o.importo)]);
+  }
+  body.push(['TOTALE', '', '', '', NUM(totBtl), EURpdf(totImp)]);
+
+  doc.autoTable({
+    head: [['Data', 'Cliente', 'Città', 'N. Doc', 'Bottiglie', 'Importo']],
+    body: body,
+    startY: y,
+    theme: 'striped',
+    headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 8 },
+    bodyStyles: { fontSize: 7 },
+    columnStyles: { 4: { halign: 'right' }, 5: { halign: 'right' } },
+    styles: { cellPadding: 1.8 },
+    margin: { left: margin, right: margin },
+    didParseCell: function(data) {
+      if (data.section === 'body' && data.row.index === body.length - 1) {
+        data.cell.styles.fontStyle = 'bold';
+        data.cell.styles.fillColor = [240, 230, 230];
+      }
+    },
+    didDrawPage: function() {
+      drawHeader(doc, rFake, pageW);
+    }
+  });
+
+  addPageNumbers(doc, pageW, pageH);
+  doc.save('Mosnel_Ordini_' + String(window._fvOrdiniAgente || '').replace(/\s+/g, '_') + '.pdf');
 }
 
 function buildDonutReferenzeCliente(refs26, refs25, totalBtl, anno, annoP) {
@@ -2918,6 +3162,10 @@ function exportFVExcel() {
     exportClienteExcel(window._fvCliente);
     return;
   }
+  if (window._fvType === 'ordini') {
+    exportOrdiniExcel();
+    return;
+  }
   if (!window._fvData || !window._fvData.length) return;
   var ordered = readTableOrder('fv-tbl', window._fvData);
   var isItalia = window._fvIsItalia;
@@ -2989,6 +3237,10 @@ function exportClienteExcel(nome) {
 function exportFVPdf() {
   if (window._fvType === 'cliente') {
     exportClientePdf(window._fvCliente);
+    return;
+  }
+  if (window._fvType === 'ordini') {
+    exportOrdiniPdf();
     return;
   }
   if (!window._fvData) return;
