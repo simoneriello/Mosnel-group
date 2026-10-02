@@ -181,6 +181,17 @@ tr.tot-row td{background:#faf7f7;font-weight:700;border-top:2px solid var(--wine
 tr.ord-hl td{background:#fdf3d9;border-left:3px solid var(--gold)}
 tr.ord-hl:hover td{background:#fbecc6}
 
+/* Riga fissa con il dettaglio mensile sotto ogni cliente (vista agente) */
+tr.month-subrow td{background:#faf7f7;border-bottom:1px solid var(--border)}
+tr.month-subrow:hover td{background:#faf7f7}
+tr.month-subrow .subrow-blank{padding:0}
+tr.month-subrow .subrow-content{padding:10px 14px 12px}
+.month-cell{flex:1;text-align:center;padding:0 3px}
+.month-cell + .month-cell{border-left:1px solid var(--border)}
+.month-cell-label{font-size:9px;font-weight:700;letter-spacing:0.4px;color:var(--muted);text-transform:uppercase;margin-bottom:5px}
+.month-cell-v26{font-size:11px;font-weight:700;color:var(--wine);line-height:1.6}
+.month-cell-v25{font-size:11px;color:#b8922c;line-height:1.6}
+
 /* Vendite per formato — sezione dedicata */
 .fmt-cards-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
 @media(max-width:900px){.fmt-cards-row{grid-template-columns:repeat(2,1fr)}}
@@ -728,6 +739,13 @@ function PCTsign(n) {
 }
 function PM(tot, btl) { return btl > 0 ? tot / btl : 0; }
 function escapeHTML(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+// Formato compatto per i valori mensili nella riga di dettaglio sotto ogni cliente (es. "8,5k", "—")
+function fmtMeseCompatto(v) {
+  if (!v) return '—';
+  if (v >= 1000000) return (v/1000000).toFixed(1).replace('.', ',') + 'M';
+  if (v >= 1000) return (v/1000).toFixed(1).replace('.', ',') + 'k';
+  return Math.round(v).toString();
+}
 
 document.getElementById('drop-zone').addEventListener('click', function() {
   document.getElementById('fi').click();
@@ -1297,6 +1315,22 @@ function calcolaTrendMensile(dati, anno, periodo) {
   return trend;
 }
 
+// Come calcolaTrendMensile, ma per un singolo cliente e sempre sui 12 mesi interi
+// (indipendente dal periodo filtrato in testata) — usato per la riga di dettaglio
+// mensile nella tabella clienti della vista agente.
+function calcolaTrendMensileCliente(dati, cliente, anno) {
+  var trend = {};
+  for (var m = 1; m <= 12; m++) trend[m] = 0;
+  for (var i = 0; i < dati.length; i++) {
+    var r = dati[i];
+    if (r.anno !== anno) continue;
+    if (r.cliente !== cliente) continue;
+    if (r.tipoRiga !== 'Vendita') continue;
+    trend[r.mese] += r.importo;
+  }
+  return trend;
+}
+
 function vistaLabel(vista) {
   if (vista !== 'ITALIA') return vista;
   return {HORECA: 'Horeca Italia Totale', ESTERO: 'Estero Totale', NEGOZIO: 'Negozio Totale'}[CURRENT_CHANNEL] || 'Totale';
@@ -1588,7 +1622,7 @@ function renderReport() {
   
   // Tabella inline (sempre visibile per scheda agente, opzionale per Italia)
   html += '<div class="section"><div class="section-title">' + entityLabelCap + ' — dettaglio (' + r.tutti.length + ')</div>';
-  html += buildMainTable(r.tutti, r.isItalia);
+  html += buildMainTable(r.tutti, r.isItalia, r.dati, r.anno, r.annoP);
   html += '</div>';
   
   // Rotazione referenze — DONUT
@@ -1624,24 +1658,36 @@ function applyMainTableSnapshot(r) {
   var tbody = document.querySelector('#main-tbl tbody');
   if (!tbody) return;
   var totRow = tbody.querySelector('tr.tot-row');
-  var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr:not(.tot-row)'));
-  
-  // Crea mappa nome → riga
+  var mainRows = Array.prototype.slice.call(tbody.querySelectorAll('tr:not(.tot-row):not(.month-subrow)'));
+
+  // Crea mappa nome → {riga, eventuale riga di dettaglio mensile}, leggendo
+  // l'abbinamento PRIMA di svuotare il tbody così il dettaglio mensile
+  // segue sempre il proprio cliente.
   var rowMap = {};
-  for (var i = 0; i < rows.length; i++) {
-    rowMap[rows[i].cells[0].textContent.trim()] = rows[i];
+  for (var i = 0; i < mainRows.length; i++) {
+    var row = mainRows[i];
+    var next = row.nextElementSibling;
+    var sub = (next && next.classList.contains('month-subrow')) ? next : null;
+    rowMap[row.cells[0].textContent.trim()] = { row: row, sub: sub };
   }
-  
+
   // Riordina secondo snapshot
   tbody.innerHTML = '';
+  var placed = {};
   for (var i = 0; i < snap.domOrder.length; i++) {
-    var row = rowMap[snap.domOrder[i].nome];
-    if (row) tbody.appendChild(row);
+    var nome = snap.domOrder[i].nome;
+    var entry = rowMap[nome];
+    if (entry) {
+      tbody.appendChild(entry.row);
+      if (entry.sub) tbody.appendChild(entry.sub);
+      placed[nome] = true;
+    }
   }
   // Aggiungi rimanenti
   for (var key in rowMap) {
-    var r2 = rowMap[key];
-    if (r2.parentElement !== tbody) tbody.appendChild(r2);
+    if (placed[key]) continue;
+    tbody.appendChild(rowMap[key].row);
+    if (rowMap[key].sub) tbody.appendChild(rowMap[key].sub);
   }
   if (totRow) tbody.appendChild(totRow);
   
@@ -1673,7 +1719,7 @@ function applyMainTableSnapshot(r) {
 }
 
 function bindMainRowClicks(r) {
-  var rows = document.querySelectorAll('#main-tbl tbody tr:not(.tot-row)');
+  var rows = document.querySelectorAll('#main-tbl tbody tr:not(.tot-row):not(.month-subrow)');
   for (var i = 0; i < rows.length; i++) {
     (function(row) {
       row.classList.add('clik');
@@ -1714,7 +1760,7 @@ function bindMainRowClicks(r) {
   }
 }
 
-function buildMainTable(data, isItalia) {
+function buildMainTable(data, isItalia, dati, anno, annoP) {
   var html = '<div class="table-wrap"><div class="table-scroll"><table id="main-tbl">';
   html += '<thead><tr>';
   if (isItalia) {
@@ -1764,6 +1810,21 @@ function buildMainTable(data, isItalia) {
     html += '<td class="text-right">' + NUM(c.b25Eq) + '</td>';
     html += '<td class="text-right">' + EUR(c.pm26) + '</td>';
     html += '</tr>';
+
+    // Riga fissa con il dettaglio mensile (solo vista agente, sempre 12 mesi interi)
+    if (!isItalia && dati) {
+      var m26 = calcolaTrendMensileCliente(dati, c.nome, anno);
+      var m25 = calcolaTrendMensileCliente(dati, c.nome, annoP);
+      html += '<tr class="month-subrow"><td class="subrow-blank"></td><td class="subrow-content" colspan="8"><div style="display:flex">';
+      for (var m = 1; m <= 12; m++) {
+        html += '<div class="month-cell">';
+        html += '<div class="month-cell-label">' + meseAbbr(m) + '</div>';
+        html += '<div class="month-cell-v26">' + fmtMeseCompatto(m26[m]) + '</div>';
+        html += '<div class="month-cell-v25">' + fmtMeseCompatto(m25[m]) + '</div>';
+        html += '</div>';
+      }
+      html += '</div></td></tr>';
+    }
   }
   
   var totVarV = totF26 - totF25;
@@ -3021,16 +3082,24 @@ function initSort(tblId) {
 function sortTable(tblId, colIdx, type) {
   var tbl = document.getElementById(tblId);
   var tbody = tbl.querySelector('tbody');
-  var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr:not(.tot-row)'));
   var totRow = tbody.querySelector('tr.tot-row');
-  
+  var mainRows = Array.prototype.slice.call(tbody.querySelectorAll('tr:not(.tot-row):not(.month-subrow)'));
+  // Abbina ogni riga alla sua eventuale riga di dettaglio mensile (se presente),
+  // leggendo i rapporti DOM PRIMA di toccare l'ordine, così il dettaglio
+  // mensile segue sempre il suo cliente anche dopo l'ordinamento.
+  var pairs = mainRows.map(function(row) {
+    var next = row.nextElementSibling;
+    var sub = (next && next.classList.contains('month-subrow')) ? next : null;
+    return { row: row, sub: sub };
+  });
+
   var key = tblId + ':' + colIdx;
   sortStates[key] = sortStates[key] === 'asc' ? 'desc' : 'asc';
   var dir = sortStates[key];
-  
-  rows.sort(function(a, b) {
-    var av = a.cells[colIdx].textContent.trim();
-    var bv = b.cells[colIdx].textContent.trim();
+
+  pairs.sort(function(a, b) {
+    var av = a.row.cells[colIdx].textContent.trim();
+    var bv = b.row.cells[colIdx].textContent.trim();
     if (type === 'num') {
       var an = parseFloat(av.replace(/[^\d\-,.]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
       var bn = parseFloat(bv.replace(/[^\d\-,.]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
@@ -3038,7 +3107,7 @@ function sortTable(tblId, colIdx, type) {
     }
     return dir === 'asc' ? av.localeCompare(bv, 'it') : bv.localeCompare(av, 'it');
   });
-  
+
   var ths = tbl.querySelectorAll('thead th');
   for (var i = 0; i < ths.length; i++) {
     ths[i].classList.remove('sort-asc', 'sort-desc');
@@ -3048,11 +3117,14 @@ function sortTable(tblId, colIdx, type) {
   ths[colIdx].classList.add(dir === 'asc' ? 'sort-asc' : 'sort-desc');
   var arr = ths[colIdx].querySelector('.sort-arrow');
   if (arr) arr.textContent = dir === 'asc' ? '▲' : '▼';
-  
+
   tbody.innerHTML = '';
-  for (var i = 0; i < rows.length; i++) tbody.appendChild(rows[i]);
+  for (var i = 0; i < pairs.length; i++) {
+    tbody.appendChild(pairs[i].row);
+    if (pairs[i].sub) tbody.appendChild(pairs[i].sub);
+  }
   if (totRow) tbody.appendChild(totRow);
-  
+
   // Riattacca click handlers dopo il sort
   if (tblId === 'fv-tbl' && window._fvData) {
     bindFVRowClicks(tblId, window._fvData, window._fvIsItalia);
@@ -3210,7 +3282,7 @@ function clearSearch() {
 
 // Legge l'ordine corrente delle righe della tabella nel DOM e restituisce i dati ordinati
 function readTableOrder(tblId, sourceData) {
-  var rows = document.querySelectorAll('#' + tblId + ' tbody tr:not(.tot-row)');
+  var rows = document.querySelectorAll('#' + tblId + ' tbody tr:not(.tot-row):not(.month-subrow)');
   if (!rows.length || !sourceData) return sourceData || [];
   var ordered = [];
   for (var i = 0; i < rows.length; i++) {
@@ -4527,6 +4599,17 @@ function addClientiTablePage(doc, r, pageW, margin) {
       body.push([c.nome, c.nClienti26 || 0, EURpdf(c.f26), EURpdf(c.f25), EURsignPdf(c.f26-c.f25), PCTsign(varP), NUM(c.b26Eq || 0), NUM(c.b25Eq || 0), EURpdf(c.pm26)]);
     } else {
       body.push([c.nome, c.citta || '', c.agente, EURpdf(c.f26), EURpdf(c.f25), EURsignPdf(c.f26-c.f25), PCTsign(varP), NUM(c.b26Eq || 0), NUM(c.b25Eq || 0), EURpdf(c.pm26)]);
+      // Riga fissa con il dettaglio mensile (sempre 12 mesi interi, come a schermo)
+      if (r.dati) {
+        var m26t = calcolaTrendMensileCliente(r.dati, c.nome, r.anno);
+        var m25t = calcolaTrendMensileCliente(r.dati, c.nome, r.annoP);
+        var m26fmt = [], m25fmt = [];
+        for (var m = 1; m <= 12; m++) { m26fmt.push(fmtMeseCompatto(m26t[m])); m25fmt.push(fmtMeseCompatto(m25t[m])); }
+        body.push([
+          { content: '', styles: { fillColor: [250, 247, 247] } },
+          { content: '', colSpan: 9, styles: { fillColor: [250, 247, 247], minCellHeight: 10 }, monthRow: true, m26: m26fmt, m25: m25fmt }
+        ]);
+      }
     }
     totF26 += c.f26; totF25 += c.f25;
     totB26Eq += c.b26Eq || 0; totB25Eq += c.b25Eq || 0;
@@ -4538,15 +4621,15 @@ function addClientiTablePage(doc, r, pageW, margin) {
   } else {
     body.push(['TOTALE', '', '', EURpdf(totF26), EURpdf(totF25), EURsignPdf(totF26-totF25), PCTsign(totDF), NUM(totB26Eq), NUM(totB25Eq), EURpdf(totPM)]);
   }
-  
+
   var heads = r.isItalia
     ? [['Agente', 'Clienti', 'Fatt. 2026', 'Fatt. 2025', 'Var EUR', 'Var %', 'Bott. 26', 'Bott. 25', 'PM 26']]
     : [['Cliente', 'Citta', 'Agente', 'Fatt. 2026', 'Fatt. 2025', 'Var EUR', 'Var %', 'Bott. 26', 'Bott. 25', 'PM 26']];
-  
+
   var colStyles = r.isItalia
     ? { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' }, 7: { halign: 'right' }, 8: { halign: 'right' } }
     : { 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' }, 7: { halign: 'right' }, 8: { halign: 'right' }, 9: { halign: 'right' } };
-  
+
   doc.autoTable({
     head: heads, body: body, startY: y,
     theme: 'striped',
@@ -4560,6 +4643,33 @@ function addClientiTablePage(doc, r, pageW, margin) {
       if (data.section === 'body' && data.row.index === body.length - 1) {
         data.cell.styles.fontStyle = 'bold';
         data.cell.styles.fillColor = [240, 230, 230];
+      }
+    },
+    didDrawCell: function(data) {
+      // Disegna a mano la griglia dei 12 mesi dentro la cella unita della riga di dettaglio
+      if (data.section !== 'body') return;
+      var raw = data.cell.raw;
+      if (!raw || !raw.monthRow) return;
+      var cell = data.cell;
+      var n = 12;
+      var segW = cell.width / n;
+      doc.setDrawColor(232, 222, 222);
+      doc.setLineWidth(0.1);
+      for (var mi = 0; mi < n; mi++) {
+        var segX = cell.x + mi * segW;
+        if (mi > 0) doc.line(segX, cell.y + 1, segX, cell.y + cell.height - 1);
+        var cx = segX + segW / 2;
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(5.5);
+        doc.setTextColor(122, 107, 108);
+        doc.text(meseAbbr(mi + 1).toUpperCase(), cx, cell.y + 3, { align: 'center' });
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(6);
+        doc.setTextColor(114, 47, 55);
+        doc.text(raw.m26[mi], cx, cell.y + 6, { align: 'center' });
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(184, 146, 44);
+        doc.text(raw.m25[mi], cx, cell.y + 8.8, { align: 'center' });
       }
     }
   });
