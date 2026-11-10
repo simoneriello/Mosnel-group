@@ -358,6 +358,13 @@ tr.month-subrow .subrow-content{padding:10px 14px 12px}
 #m-export .m-opt-n{font-size:13.5px;font-weight:600;color:var(--ink)}
 #m-export .m-opt-s{font-size:11px;color:var(--muted);margin-top:1px}
 #m-export .m-warn{background:#fdf6e7;border:1px solid #f0e2c0;border-radius:10px;padding:9px 11px;font-size:11px;color:var(--amber);line-height:1.4}
+
+/* Telefono: la pagina scorre solo su e giu, mai di lato */
+@media (max-width:700px){
+  html,body{overflow-x:hidden;overscroll-behavior-x:none}
+  #upload-screen,#home-screen,#app-screen,.content,#fv,#fv-body,#search-results,#m-export .m-sheet{
+    overflow-x:hidden;overscroll-behavior-x:none;touch-action:pan-y pinch-zoom}
+}
 </style>
 </head>
 <body>
