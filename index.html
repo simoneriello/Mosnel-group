@@ -262,6 +262,102 @@ tr.month-subrow .subrow-content{padding:10px 14px 12px}
 .legend-bar-label{font-size:10px;color:var(--muted)}
 .legend-val{font-weight:600;text-align:right}
 .legend-pct{font-size:11px;color:var(--muted);text-align:right;min-width:50px}
+
+/* ===================== VISTA TELEFONO =====================
+   Sotto i 700px l'app passa a una vista pensata per consultare al volo:
+   niente tabelle larghe, tutto incolonnato, ricerca in primo piano.
+   Sopra i 700px non cambia assolutamente nulla. */
+@media (max-width:700px){
+  .topbar{padding:8px 12px}
+  .topbar-logo{height:34px}
+  .topbar-tagline{font-size:9px;margin-left:9px;padding-left:9px;letter-spacing:1px}
+  .topbar .btn-reset{font-size:11px;padding:5px 9px}
+  .filterbar{padding:9px 12px;gap:8px}
+  .filter-group{flex:1 1 44%;min-width:0}
+  .filterbar .filter-group:first-child{flex:1 1 100%}
+  .btn-gen{display:none}
+  .data-info-banner{padding:6px 12px;gap:8px}
+  .data-info-text{font-size:10.5px;line-height:1.3}
+  .data-info-label{font-size:8.5px}
+  .filter-group select{width:100%;padding:9px 10px;font-size:14px}
+  .btn-gen{flex:1 1 100%;padding:11px;font-size:14px}
+  .data-info-banner{padding:8px 12px}
+  .searchbar{padding:9px 12px}
+  .search-input{padding:11px 36px;font-size:15px}
+  .content{padding:12px 12px 40px}
+  #fv-body{padding:12px}
+  .fv-bar{padding:9px 12px}
+  .fv-bc{font-size:12px}
+
+  .sr-item{display:flex;justify-content:space-between;align-items:center;gap:10px;background:white;border:1px solid var(--border);border-radius:12px;padding:11px 12px;margin-bottom:8px}
+  .sr-txt{min-width:0}
+  .sr-item strong{font-size:13.5px;line-height:1.25;display:block}
+  .sr-meta{font-size:11px;color:var(--muted);margin-top:2px}
+  .sr-cif{text-align:right;flex:0 0 auto}
+  .sr-cif-f{font-size:13.5px;font-weight:700;color:var(--ink)}
+  .sr-cif-v{font-size:11.5px;font-weight:700;margin-top:1px}
+
+  .m-head{margin-bottom:12px}
+  .m-title{font-family:'Cormorant Garamond',serif;font-size:1.25rem;font-weight:600;color:var(--wine);line-height:1.2;word-break:break-word}
+  .m-sub{font-size:11.5px;color:var(--muted);margin-top:2px}
+  .m-exp{margin-top:9px;background:white;border:1px solid var(--border);color:var(--wine);border-radius:20px;padding:6px 14px;font-size:12px;font-weight:700;font-family:'DM Sans',sans-serif}
+
+  .m-kgrid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:12px}
+  .m-k{background:white;border:1px solid var(--border);border-radius:12px;padding:10px 11px;min-width:0}
+  .m-k-l{font-size:9.5px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:var(--muted)}
+  .m-k-v{font-size:19px;font-weight:700;color:var(--wine);margin-top:2px;letter-spacing:-0.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .m-k-s{font-size:10.5px;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  .m-pill-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+  .m-pill{background:white;border:1px solid var(--border);border-radius:16px;padding:5px 10px;font-size:11px;color:var(--muted)}
+  .m-pill b{color:var(--ink);font-size:12.5px}
+
+  .m-sect{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin:14px 0 8px}
+  .m-row{background:white;border:1px solid var(--border);border-radius:12px;padding:11px 12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px;cursor:pointer}
+  .m-row-l{min-width:0}
+  .m-row-n{font-size:13.5px;font-weight:600;color:var(--ink);line-height:1.25}
+  .m-row-m{font-size:11px;color:var(--muted);margin-top:2px}
+  .m-row-r{text-align:right;flex:0 0 auto}
+  .m-row-f{font-size:14px;font-weight:700;color:var(--ink)}
+  .m-row-v{font-size:11.5px;font-weight:700;margin-top:1px}
+  .m-altri{width:100%;background:white;border:1px solid var(--border);color:var(--wine);border-radius:12px;padding:12px;font-size:13px;font-weight:700;font-family:'DM Sans',sans-serif;margin-top:2px}
+
+  .m-hero{background:linear-gradient(135deg,var(--wine),var(--wine-dark));border-radius:14px;padding:14px 15px;color:white;margin-bottom:12px}
+  .m-hero-n{font-size:17px;font-weight:700;line-height:1.2}
+  .m-hero-m{font-size:11.5px;opacity:0.85;margin-top:4px;line-height:1.4}
+  .m-big{background:white;border:1px solid var(--border);border-radius:12px;padding:13px 14px;margin-bottom:10px}
+  .m-big-l{font-size:9.5px;font-weight:700;letter-spacing:0.6px;text-transform:uppercase;color:var(--muted)}
+  .m-big-v{font-size:26px;font-weight:700;color:var(--wine);letter-spacing:-0.5px;line-height:1.1;margin-top:1px}
+  .m-big-s{font-size:12px;color:var(--muted);margin-top:3px}
+  .m-mini{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
+  .m-mi{background:white;border:1px solid var(--border);border-radius:11px;padding:9px 6px;text-align:center;min-width:0}
+  .m-mi-l{font-size:8.5px;font-weight:700;letter-spacing:0.4px;text-transform:uppercase;color:var(--muted)}
+  .m-mi-v{font-size:15px;font-weight:700;color:var(--ink);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .m-mi-s{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+  .m-mesi{background:white;border:1px solid var(--border);border-radius:12px;padding:10px 6px 9px}
+  .m-mrow{display:flex}
+  .m-mrow + .m-mrow{margin-top:9px;border-top:1px solid #f2eaea;padding-top:8px}
+  .m-mcell{flex:1;text-align:center;padding:0 1px;min-width:0}
+  .m-mcell + .m-mcell{border-left:1px solid #f2eaea}
+  .m-ml{font-size:7.5px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+  .m-m26{font-size:9.5px;font-weight:700;color:var(--wine);line-height:1.45}
+  .m-m25{font-size:9.5px;color:#b8922c;line-height:1.45}
+  .m-leg{font-size:9.5px;color:var(--muted);text-align:center;margin-top:6px}
+  .m-cliexp{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:4px}
+  .m-cliexp button{background:white;border:1px solid var(--border);border-radius:11px;padding:12px;font-size:12.5px;font-weight:700;color:var(--wine);font-family:'DM Sans',sans-serif}
+}
+
+/* pannello esporta: fuori dalla media query perche' creato via JS solo su telefono */
+#m-export .m-dim{position:fixed;inset:0;background:rgba(26,16,18,0.45);z-index:2000}
+#m-export .m-sheet{position:fixed;left:0;right:0;bottom:0;background:white;border-radius:20px 20px 0 0;padding:8px 14px 24px;z-index:2001;box-shadow:0 -6px 24px rgba(0,0,0,0.18);max-height:86vh;overflow-y:auto}
+#m-export .m-grab{width:38px;height:4px;background:#ddd0d0;border-radius:3px;margin:0 auto 12px}
+#m-export .m-sheet-t{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+#m-export .m-opt{display:flex;align-items:center;gap:11px;padding:12px 11px;border:1px solid var(--border);border-radius:12px;margin-bottom:8px;cursor:pointer}
+#m-export .m-opt-i{width:30px;height:30px;border-radius:8px;background:var(--wine-light);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--wine);flex:0 0 auto}
+#m-export .m-opt-n{font-size:13.5px;font-weight:600;color:var(--ink)}
+#m-export .m-opt-s{font-size:11px;color:var(--muted);margin-top:1px}
+#m-export .m-warn{background:#fdf6e7;border:1px solid #f0e2c0;border-radius:10px;padding:9px 11px;font-size:11px;color:var(--amber);line-height:1.4}
 </style>
 </head>
 <body>
@@ -1740,8 +1836,264 @@ function generaReport() {
   }, 50);
 }
 
+
+// ===================== VISTA TELEFONO =====================
+// Sotto i 700px il report e la scheda cliente vengono disegnati in una forma
+// pensata per lo schermo stretto: schede incolonnate invece di tabelle.
+// I calcoli sono gli stessi, cambia solo come vengono mostrati.
+// Fatturato e variazione dei risultati di ricerca, nel periodo attualmente
+// selezionato. Calcolato solo su telefono e solo sui nomi trovati.
+function calcolaCifreRicerca(cliKeys, agKeys) {
+  var MAX = 20;
+  var cli = {}, ag = {};
+  for (var i = 0; i < Math.min(MAX, cliKeys.length); i++) cli[cliKeys[i]] = { f26: 0, f25: 0 };
+  for (var i = 0; i < Math.min(MAX, agKeys.length); i++) ag[agKeys[i]] = { f26: 0, f25: 0 };
+  var per   = lastReport ? lastReport.periodo : null;
+  var anno  = lastReport ? lastReport.anno  : 2026;
+  var annoP = lastReport ? lastReport.annoP : 2025;
+  for (var i = 0; i < D.length; i++) {
+    var r = D[i];
+    if (r.tipoRiga !== 'Vendita') continue;
+    if (r.anno !== anno && r.anno !== annoP) continue;
+    if (per && !inPeriodo(r, per)) continue;
+    if (!isRigaFatturato(r)) continue;
+    var c = cli[r.cliente];
+    if (c) { if (r.anno === anno) c.f26 += r.importo; else c.f25 += r.importo; }
+    var a = ag[r.agente];
+    if (a) { if (r.anno === anno) a.f26 += r.importo; else a.f25 += r.importo; }
+  }
+  return { cli: cli, ag: ag };
+}
+
+function isMobile() {
+  return window.matchMedia('(max-width:700px)').matches;
+}
+
+var _mLimite = 25;           // quante righe mostra la lista mobile prima di "Mostra altri"
+var _mModoUltimoRender = null;
+
+function mKpi(label, valore, sotto) {
+  return '<div class="m-k"><div class="m-k-l">' + label + '</div><div class="m-k-v">' + valore +
+         '</div><div class="m-k-s">' + sotto + '</div></div>';
+}
+
+function mDelta(diff, pct) {
+  return '<span class="' + (diff >= 0 ? 'text-green' : 'text-red') + '" style="font-weight:700">' + PCTsign(pct) + '</span>';
+}
+
+function buildListaMobile(r) {
+  var html = '';
+  var n = Math.min(_mLimite, r.tutti.length);
+  for (var i = 0; i < n; i++) {
+    var c = r.tutti[i];
+    var varV = c.f26 - c.f25;
+    var varP = c.f25 > 0 ? (varV / c.f25) * 100 : (c.f26 > 0 ? 100 : -100);
+    var meta = r.isItalia ? (NUM(c.nClienti26 || 0) + ' clienti') : escapeHTML(c.citta || '');
+    if (c.cof26) meta += ' &middot; ' + NUM(c.cof26) + ' cofan.';
+    html += '<div class="m-row" data-nome="' + escapeHTML(c.nome) + '">';
+    html += '<div class="m-row-l"><div class="m-row-n">' + escapeHTML(c.nome) + '</div><div class="m-row-m">' + meta + '</div></div>';
+    html += '<div class="m-row-r"><div class="m-row-f">' + EUR0(c.f26) + '</div>';
+    html += '<div class="m-row-v ' + (varV >= 0 ? 'text-green' : 'text-red') + '">' + PCTsign(varP) + '</div></div>';
+    html += '</div>';
+  }
+  if (r.tutti.length > n) {
+    var restanti = r.tutti.length - n;
+    html += '<button class="m-altri" onclick="mostraAltriMobile()">Mostra altri ' + Math.min(25, restanti) + ' (ne restano ' + NUM(restanti) + ')</button>';
+  }
+  return html;
+}
+
+function mostraAltriMobile() {
+  if (!lastReport) return;
+  _mLimite += 25;
+  var box = document.getElementById('m-lista');
+  if (!box) return;
+  box.innerHTML = buildListaMobile(lastReport);
+  bindListaMobile();
+}
+
+function bindListaMobile() {
+  var rows = document.querySelectorAll('#m-lista .m-row');
+  for (var i = 0; i < rows.length; i++) {
+    (function(row) {
+      row.addEventListener('click', function() {
+        var nome = row.getAttribute('data-nome');
+        if (lastReport.isItalia) {
+          document.getElementById('vista').value = nome;
+          generaReport();
+          var cont = document.querySelector('.content');
+          if (cont) cont.scrollTop = 0;
+        } else {
+          fvStack = [];
+          showFV({ type: 'cliente', nome: nome });
+        }
+      });
+    })(rows[i]);
+  }
+}
+
+function renderReportMobile(r) {
+  _mLimite = 25;
+  var dF  = r.d25.fatturato   > 0 ? ((r.d26.fatturato   - r.d25.fatturato)   / r.d25.fatturato)   * 100 : 0;
+  var dB  = r.d25.bottiglieEq > 0 ? ((r.d26.bottiglieEq - r.d25.bottiglieEq) / r.d25.bottiglieEq) * 100 : 0;
+  var dPM = r.d25.pm          > 0 ? ((r.d26.pm          - r.d25.pm)          / r.d25.pm)          * 100 : 0;
+
+  var html = '<div class="m-head"><div class="m-title">' + escapeHTML(vistaLabel(r.vista)) + '</div>';
+  html += '<div class="m-sub">' + r.anno + ' vs ' + r.annoP + ' &middot; ' + escapeHTML(r.periodo.label) + '</div>';
+  html += '<button class="m-exp" onclick="apriExportMobile()">&#8681; Esporta</button></div>';
+
+  html += '<div class="m-kgrid">';
+  html += mKpi('Fatturato ' + r.anno, EUR0(r.d26.fatturato), mDelta(r.d26.fatturato - r.d25.fatturato, dF) + ' vs ' + EUR0(r.d25.fatturato));
+  html += mKpi('Bottiglie', NUM(r.d26.bottiglieEq), mDelta(r.d26.bottiglieEq - r.d25.bottiglieEq, dB) + ' vs ' + NUM(r.d25.bottiglieEq));
+  html += mKpi('Prezzo medio', EUR(r.d26.pm), mDelta(r.d26.pm - r.d25.pm, dPM) + ' vs ' + EUR(r.d25.pm));
+  if (r.cof26 && r.cof26.totale > 0) {
+    var det = [];
+    for (var i = 0; i < r.cof26.tipi.length; i++) {
+      if (r.cof26.tipi[i].pezzi) det.push(NUM(r.cof26.tipi[i].pezzi) + ' ' + escapeHTML(r.cof26.tipi[i].nome.split(' ')[0].toLowerCase()));
+    }
+    html += mKpi('Cofanetti', NUM(r.cof26.totale), det.join(' &middot; '));
+  } else {
+    html += mKpi('Ordini', NUM(r.d26.ordini), 'vs ' + NUM(r.d25.ordini) + ' nel ' + r.annoP);
+  }
+  html += '</div>';
+
+  html += '<div class="m-pill-row">';
+  html += '<div class="m-pill"><b>' + r.nuovi.length + '</b> nuovi</div>';
+  html += '<div class="m-pill"><b>' + r.crescita.length + '</b> in crescita</div>';
+  html += '<div class="m-pill"><b>' + r.calo.length + '</b> in calo</div>';
+  html += '<div class="m-pill"><b>' + r.persi.length + '</b> senza ordini</div>';
+  html += '</div>';
+
+  html += '<div class="m-sect">' + (r.isItalia ? 'Agenti' : 'Clienti') + ' (' + NUM(r.tutti.length) + ') &middot; dal piu\' grande</div>';
+  html += '<div id="m-lista">' + buildListaMobile(r) + '</div>';
+
+  document.getElementById('report-wrapper').innerHTML = html;
+  document.getElementById('report-wrapper').style.display = 'block';
+  document.getElementById('placeholder').style.display = 'none';
+  setTimeout(bindListaMobile, 30);
+}
+
+// Scheda cliente in versione telefono. Riceve i valori gia' calcolati da
+// renderFVCliente, cosi' i numeri sono identici a quelli del computer.
+function buildClienteMobile(nome, agente, citta, prov, anno, annoP, f26, f25, b26Eq, b25Eq, pm26, pm25, dF, dB, dPM, fattureArr, refs26, v26) {
+  var html = '<div class="m-hero"><div class="m-hero-n">' + escapeHTML(nome) + '</div>';
+  var riga2 = [];
+  if (citta) riga2.push(escapeHTML(citta) + (prov ? ' (' + escapeHTML(prov) + ')' : ''));
+  if (agente) riga2.push(escapeHTML(agente));
+  html += '<div class="m-hero-m">' + riga2.join('<br>') + '</div></div>';
+
+  html += '<div class="m-big"><div class="m-big-l">Fatturato ' + anno + '</div>';
+  html += '<div class="m-big-v">' + EUR0(f26) + '</div>';
+  html += '<div class="m-big-s">vs ' + EUR0(f25) + ' nel ' + annoP + ' &nbsp; <span class="' + (f26 - f25 >= 0 ? 'text-green' : 'text-red') + '" style="font-weight:700">' + EURsign(f26 - f25) + ' (' + PCTsign(dF) + ')</span></div></div>';
+
+  var ultima = fattureArr.length ? fattureArr[0].data : '-';
+  html += '<div class="m-mini">';
+  html += '<div class="m-mi"><div class="m-mi-l">Bottiglie</div><div class="m-mi-v">' + NUM(b26Eq) + '</div><div class="m-mi-s ' + (b26Eq - b25Eq >= 0 ? 'text-green' : 'text-red') + '">' + PCTsign(dB) + '</div></div>';
+  html += '<div class="m-mi"><div class="m-mi-l">Prezzo medio</div><div class="m-mi-v">' + EUR(pm26) + '</div><div class="m-mi-s ' + (pm26 - pm25 >= 0 ? 'text-green' : 'text-red') + '">' + PCTsign(dPM) + '</div></div>';
+  html += '<div class="m-mi"><div class="m-mi-l">Fatture</div><div class="m-mi-v">' + fattureArr.length + '</div><div class="m-mi-s">ult. ' + escapeHTML(ultima) + '</div></div>';
+  html += '</div>';
+
+  // cofanetti del cliente
+  var cofM = calcolaCofanetti(v26, null);
+  if (cofM.totale > 0) {
+    html += '<div class="m-sect">Cofanetti</div><div class="m-pill-row">';
+    for (var i = 0; i < cofM.tipi.length; i++) {
+      if (!cofM.tipi[i].pezzi) continue;
+      html += '<div class="m-pill"><b>' + NUM(cofM.tipi[i].pezzi) + '</b> ' + escapeHTML(cofM.tipi[i].nome) + '</div>';
+    }
+    html += '</div>';
+  }
+
+  // dodici mesi su due righe da sei: a 390px sei per riga si leggono, dodici no
+  var m26 = calcolaTrendMensileCliente(D, nome, anno);
+  var m25 = calcolaTrendMensileCliente(D, nome, annoP);
+  html += '<div class="m-sect">Fatturato mese per mese</div><div class="m-mesi">';
+  for (var blocco = 0; blocco < 2; blocco++) {
+    html += '<div class="m-mrow">';
+    for (var k = 1; k <= 6; k++) {
+      var m = blocco * 6 + k;
+      html += '<div class="m-mcell"><div class="m-ml">' + meseAbbr(m) + '</div>';
+      html += '<div class="m-m26">' + fmtMeseCompatto(m26[m]) + '</div>';
+      html += '<div class="m-m25">' + fmtMeseCompatto(m25[m]) + '</div></div>';
+    }
+    html += '</div>';
+  }
+  html += '<div class="m-leg"><span style="color:var(--wine);font-weight:700">' + anno + '</span> &nbsp;&middot;&nbsp; <span style="color:#b8922c;font-weight:700">' + annoP + '</span></div></div>';
+
+  // referenze principali
+  var refArr = [];
+  for (var k in refs26) {
+    if (k === 'Accessori') continue;   // astucci e cofanetti non sono bottiglie
+    if (refs26[k] && refs26[k].btlEq > 0) refArr.push({ nome: k, btlEq: refs26[k].btlEq, fatt: refs26[k].fatt });
+  }
+  refArr.sort(function(a, b) { return b.btlEq - a.btlEq; });
+  if (refArr.length) {
+    html += '<div class="m-sect">Referenze principali</div>';
+    for (var i = 0; i < Math.min(4, refArr.length); i++) {
+      var pct = b26Eq > 0 ? (refArr[i].btlEq / b26Eq * 100) : 0;
+      html += '<div class="m-row" style="cursor:default"><div class="m-row-l"><div class="m-row-n">' + escapeHTML(refArr[i].nome) + '</div></div>';
+      html += '<div class="m-row-r"><div class="m-row-f">' + NUM(refArr[i].btlEq) + ' bt</div><div class="m-row-m">' + PCT(pct) + '</div></div></div>';
+    }
+  }
+
+  html += '<div class="m-sect">Esporta questo cliente</div><div class="m-cliexp">';
+  html += '<button onclick="exportClientePdf(' + JSON.stringify(nome).replace(/"/g, '&quot;') + ')">&#8681; PDF</button>';
+  html += '<button onclick="exportClienteExcel(' + JSON.stringify(nome).replace(/"/g, '&quot;') + ')">&#8681; Excel</button>';
+  html += '</div>';
+  return html;
+}
+
+function apriExportMobile() {
+  var r = lastReport;
+  if (!r) return;
+  chiudiExportMobile();
+  var h = '<div class="m-dim" onclick="chiudiExportMobile()"></div><div class="m-sheet">';
+  h += '<div class="m-grab"></div>';
+  h += '<div class="m-sheet-t">Esporta &middot; ' + escapeHTML(r.periodo.label) + '</div>';
+  h += '<div class="m-opt" onclick="chiudiExportMobile();exportReportPdf()"><div class="m-opt-i">PDF</div><div><div class="m-opt-n">Report completo</div><div class="m-opt-s">A4 orizzontale, lo stesso del computer</div></div></div>';
+  h += '<div class="m-opt" onclick="chiudiExportMobile();exportMultiPeriodoPdf()"><div class="m-opt-i">PDF</div><div><div class="m-opt-n">Multi-periodo</div><div class="m-opt-s">Periodo scelto + YTD affiancati</div></div></div>';
+  h += '<div class="m-opt" onclick="chiudiExportMobile();exportReportExcel()"><div class="m-opt-i">XLS</div><div><div class="m-opt-n">Excel</div><div class="m-opt-s">Tutte le liste</div></div></div>';
+  h += '<div class="m-opt" onclick="chiudiExportMobile();' + (r.isItalia ? 'openOrdiniItalia()' : 'openOrdiniAgente()') + '"><div class="m-opt-i">&#9776;</div><div><div class="m-opt-n">Storico ordini</div><div class="m-opt-s">Con filtro data e ricerca</div></div></div>';
+  if (r.tutti.length > 200) {
+    h += '<div class="m-warn">Il report completo contiene ' + NUM(r.tutti.length) + ' ' + (r.isItalia ? 'agenti' : 'clienti') + ': sul telefono la generazione puo\' richiedere qualche decina di secondi. Per un singolo agente o cliente e\' immediata.</div>';
+  }
+  h += '</div>';
+  var box = document.createElement('div');
+  box.id = 'm-export';
+  box.innerHTML = h;
+  document.body.appendChild(box);
+}
+
+function chiudiExportMobile() {
+  var b = document.getElementById('m-export');
+  if (b && b.parentNode) b.parentNode.removeChild(b);
+}
+
+// Se si ruota il telefono o si ridimensiona la finestra attraversando la
+// soglia dei 700px, ridisegna il report nella forma giusta.
+// Su telefono il bottone "Genera Report" e' nascosto: basta cambiare un filtro.
+window.addEventListener('DOMContentLoaded', function() {
+  var campi = ['vista', 'anno', 'periodo', 'mese-singolo', 'trimestre-sel', 'mese-da', 'mese-a'];
+  for (var i = 0; i < campi.length; i++) {
+    var el = document.getElementById(campi[i]);
+    if (!el) continue;
+    el.addEventListener('change', function() {
+      if (isMobile() && D && D.length) generaReport();
+    });
+  }
+});
+
+window.addEventListener('resize', function() {
+  var modo = isMobile() ? 'mobile' : 'desktop';
+  if (modo === _mModoUltimoRender) return;
+  if (!lastReport) { _mModoUltimoRender = modo; return; }
+  renderReport();
+});
+
 function renderReport() {
   var r = lastReport;
+  _mModoUltimoRender = isMobile() ? 'mobile' : 'desktop';
+  if (isMobile()) { renderReportMobile(r); return; }
   var dF = r.d25.fatturato > 0 ? ((r.d26.fatturato - r.d25.fatturato) / r.d25.fatturato) * 100 : 0;
   var dB = r.d25.bottiglieEq > 0 ? ((r.d26.bottiglieEq - r.d25.bottiglieEq) / r.d25.bottiglieEq) * 100 : 0;
   var dPM = r.d25.pm > 0 ? ((r.d26.pm - r.d25.pm) / r.d25.pm) * 100 : 0;
@@ -2833,6 +3185,12 @@ function renderFVCliente(state) {
   if (citta) subtitleParts.push(escapeHTML(citta) + (prov ? ' (' + escapeHTML(prov) + ')' : ''));
   subtitleParts.push(escapeHTML(lastReport.periodo.label));
   
+  if (isMobile()) {
+    document.getElementById('fv-body').innerHTML = buildClienteMobile(nome, agente, citta, prov, anno, annoP, f26, f25, b26Eq, b25Eq, pm26, pm25, dF, dB, dPM, fattureArr, refs26, v26);
+    document.getElementById('fv-body').scrollTop = 0;
+    return;
+  }
+
   var html = '<div class="fv-title">' + escapeHTML(nome) + '</div>';
   html += '<div class="fv-sub">' + subtitleParts.join(' · ') + '</div>';
   
@@ -3511,19 +3869,37 @@ function doSearch(q) {
     return;
   }
   
+  // Su telefono i risultati portano gia' il fatturato e la variazione:
+  // spesso basta questa schermata e non serve nemmeno aprire la scheda.
+  var cifre = isMobile() ? calcolaCifreRicerca(cliKeys, agKeys) : null;
+
+  function voceRicerca(tipo, name, meta) {
+    if (!cifre) {
+      return '<div class="sr-item" data-type="' + tipo + '" data-name="' + escapeHTML(name) + '"><strong>' +
+             escapeHTML(name) + '</strong><div class="sr-meta">' + escapeHTML(meta) + '</div></div>';
+    }
+    var t = cifre[tipo === 'agente' ? 'ag' : 'cli'][name];
+    var dx = '';
+    if (t) {
+      var varP = t.f25 > 0 ? ((t.f26 - t.f25) / t.f25) * 100 : (t.f26 > 0 ? 100 : 0);
+      dx = '<div class="sr-cif"><div class="sr-cif-f">' + EUR0(t.f26) + '</div>' +
+           '<div class="sr-cif-v ' + (t.f26 - t.f25 >= 0 ? 'text-green' : 'text-red') + '">' + PCTsign(varP) + '</div></div>';
+    }
+    return '<div class="sr-item" data-type="' + tipo + '" data-name="' + escapeHTML(name) + '">' +
+           '<div class="sr-txt"><strong>' + escapeHTML(name) + '</strong><div class="sr-meta">' + escapeHTML(meta) + '</div></div>' + dx + '</div>';
+  }
+
   var html = '';
   if (agKeys.length) {
     html += '<div class="sr-section">Agenti</div>';
     for (var i = 0; i < agKeys.length; i++) {
-      var name = agKeys[i];
-      html += '<div class="sr-item" data-type="agente" data-name="' + escapeHTML(name) + '"><strong>' + escapeHTML(name) + '</strong><div class="sr-meta">Agente</div></div>';
+      html += voceRicerca('agente', agKeys[i], cifre ? '' : 'Agente');
     }
   }
   if (cliKeys.length) {
     html += '<div class="sr-section" style="margin-top:12px">Clienti</div>';
     for (var i = 0; i < cliKeys.length; i++) {
-      var name = cliKeys[i];
-      html += '<div class="sr-item" data-type="cliente" data-name="' + escapeHTML(name) + '"><strong>' + escapeHTML(name) + '</strong><div class="sr-meta">' + escapeHTML(cli[name] || '') + '</div></div>';
+      html += voceRicerca('cliente', cliKeys[i], cli[cliKeys[i]] || '');
     }
   }
   sr.innerHTML = html;
