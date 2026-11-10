@@ -56,6 +56,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--ink);font
 .home-card-cta{font-size:11px;font-weight:600;margin-top:10px}
 .home-vuoto-banner{background:var(--wine-light);border:1px solid #f0dde0;border-radius:10px;padding:12px 16px;margin-top:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:12px;color:var(--amber)}
 .home-vuoto-tag{font-size:11px;color:var(--muted);white-space:nowrap}
+/* Fascia cofanetti in home: totale campagna su tutti i canali */
+.home-cof{background:var(--white);border:1px solid var(--border);border-left:3px solid var(--gold);border-radius:10px;padding:14px 18px;margin-top:16px;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s}
+.home-cof:hover{transform:translateY(-2px);box-shadow:0 4px 14px rgba(0,0,0,0.07)}
+.home-cof-label{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
+.home-cof-value{font-size:1.6rem;font-weight:600;color:var(--wine);line-height:1.1;margin-top:2px}
+.home-cof-meta{font-size:12px;color:var(--muted);margin-top:3px}
+.home-cof-tipi{display:flex;gap:22px;flex-wrap:wrap}
+.home-cof-tipo-nome{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted)}
+.home-cof-tipo-val{font-size:1.1rem;font-weight:600;color:var(--ink)}
+.home-cof-cta{font-size:12px;font-weight:600;color:var(--wine-dark);white-space:nowrap}
 @media (max-width:700px){.home-cards{grid-template-columns:1fr}}
 
 #app-screen{display:none;flex-direction:column;height:100vh}
@@ -513,6 +523,36 @@ function renderHome() {
   '</div>' +
   '<div class="home-cards">' + cards + '</div>';
 
+  // Fascia cofanetti: totale confezioni su tutti i canali, per tenere d'occhio la campagna
+  var righeCof26 = [], righeCof25 = [];
+  for (var i = 0; i < D_ALL.length; i++) {
+    var rc = D_ALL[i];
+    if (rc.tipoRiga !== 'Vendita') continue;
+    if (rc.canale !== 'HORECA' && rc.canale !== 'ESTERO' && rc.canale !== 'NEGOZIO') continue;
+    if (rc.anno === 2026) righeCof26.push(rc);
+    else if (rc.anno === 2025) righeCof25.push(rc);
+  }
+  var cofHome26 = calcolaCofanetti(righeCof26, null);
+  var cofHome25 = calcolaCofanetti(righeCof25, null);
+
+  if (cofHome26.totale > 0 || cofHome25.totale > 0) {
+    var tipiHtml = '';
+    for (var i = 0; i < cofHome26.tipi.length; i++) {
+      var tc = cofHome26.tipi[i];
+      tipiHtml += '<div><div class="home-cof-tipo-nome">' + escapeHTML(tc.nome) + '</div>' +
+                  '<div class="home-cof-tipo-val">' + NUM(tc.pezzi) + '</div></div>';
+    }
+    html += '<div class="home-cof" onclick="setChannel(\'HORECA\')">' +
+      '<div>' +
+        '<div class="home-cof-label">Cofanetti 2026</div>' +
+        '<div class="home-cof-value">' + NUM(cofHome26.totale) + ' confezioni</div>' +
+        '<div class="home-cof-meta">' + EUR0(cofHome26.fatturato) + ' di fatturato &middot; ' + NUM(cofHome25.totale) + ' nel 2025</div>' +
+      '</div>' +
+      '<div class="home-cof-tipi">' + tipiHtml + '</div>' +
+      '<div class="home-cof-cta">Vedi dettaglio in Horeca &rarr;</div>' +
+    '</div>';
+  }
+
   if (esclusoFatt > 0) {
     html += '<div class="home-vuoto-banner">' +
       '<div>Agriturismo Il Mosnel (parte correlata, cliente 597): ' + EUR0(esclusoFatt) + ' (2025+2026), ' + Object.keys(esclusoClienti).length + ' clienti — escluso da tutti i canali.</div>' +
@@ -668,6 +708,12 @@ function classificaReferenza(merceo, articolo, tipoDoc) {
     if (a.indexOf('BORSA') !== -1) return 'Accessori';
     if (a.indexOf('SECURE BOX') !== -1) return 'Accessori';
     if (a.indexOf('BARRIQUE') !== -1) return 'Accessori';
+    // Materiale non-vino che prima finiva in "Altro" e veniva contato come bottiglia:
+    // calici, spumantiere, grembiuli, buoni regalo. Generano fatturato ma NON sono bottiglie.
+    if (a.indexOf('CALIC') !== -1 || a.indexOf('BICCHIER') !== -1) return 'Accessori';
+    if (a.indexOf('SPUMANTIER') !== -1 || a.indexOf('SECCHIELL') !== -1) return 'Accessori';
+    if (a.indexOf('GREMBIUL') !== -1 || a.indexOf('CAVATAPPI') !== -1) return 'Accessori';
+    if (a.indexOf('BUONI REGALO') !== -1 || a.indexOf('BUONO REGALO') !== -1) return 'Accessori';
   }
   
   // Riserva: priorità all'articolo (gestisce anche righe con merceo non = RISERVA)
@@ -706,6 +752,104 @@ function isRigaBottiglia(v) {
 // True se la riga genera fatturato valido (esclude solo storni/righe descrittive, INCLUDE accessori).
 function isRigaFatturato(v) {
   return classificaReferenza(v.tipologia, v.articolo, v.tipoDoc) !== null;
+}
+
+// ===================== COFANETTI =====================
+// Elenco dei cofanetti da conteggiare. Per aggiungerne uno nuovo basta una riga qui.
+//   modo 'pezzi' → il cofanetto e' un articolo unico: si contano i suoi pezzi
+//   modo 'kit'   → il cofanetto e' composto da piu' articoli che viaggiano insieme:
+//                  1 cofanetto = 1 pezzo di OGNI codice sullo stesso documento,
+//                  quindi si conta il minimo tra le quantita' (le bottiglie sciolte
+//                  vendute fuori confezione restano escluse in automatico)
+//   codiciFatturato → quali righe compongono il prezzo della confezione
+var COFANETTI = [
+  {
+    id: 'calici',
+    nome: 'Box 1 bt + 2 calici',
+    modo: 'pezzi',
+    codicePezzo: 'COF3BIC',                                  // COF. NERO 1 BT. + 2 CALICI (5,00)
+    codiciFatturato: ['COF3BIC', '2BIC'],                    // + COPPIA DI CALICI CL.41 (9,00) = 14,00
+    bottiglieIncluse: false                                  // non contiene vino: non tocca le bottiglie
+  },
+  {
+    id: 'collezione-privata',
+    nome: 'Collezione Privata',
+    modo: 'kit',
+    codiciKit: ['3S05C0G', '3S13C0G', '3S20C0G'],            // Satèn 2005 + 2013 + 2020 = 87,00
+    codiciFatturato: ['3S05C0G', '3S13C0G', '3S20C0G'],
+    bottiglieIncluse: true                                   // sono 3 bottiglie vere: restano nel conteggio bottiglie
+  }
+];
+
+// Conta i cofanetti dentro un insieme di righe di vendita gia' filtrate
+// (periodo, anno, canale, agente). chiaveFn, se passata, raggruppa anche per
+// cliente o agente: serve alle colonne delle tabelle.
+// Ritorna { totale, fatturato, tipi: [{id,nome,pezzi,fatturato}], perChiave: {k: {totale, fatturato, tipi:{id:pezzi}}} }
+function calcolaCofanetti(vendite, chiaveFn) {
+  var tipi = [], perChiave = {}, totale = 0, fattTot = 0;
+
+  function accumula(chiave, idTipo, pezzi, importo) {
+    if (!chiave) return;
+    if (!perChiave[chiave]) perChiave[chiave] = { totale: 0, fatturato: 0, tipi: {} };
+    var k = perChiave[chiave];
+    k.totale += pezzi;
+    k.fatturato += importo;
+    k.tipi[idTipo] = (k.tipi[idTipo] || 0) + pezzi;
+  }
+
+  for (var t = 0; t < COFANETTI.length; t++) {
+    var cof = COFANETTI[t];
+    var pezziTipo = 0, fattTipo = 0;
+
+    if (cof.modo === 'pezzi') {
+      for (var i = 0; i < vendite.length; i++) {
+        var v = vendite[i];
+        var chiave = chiaveFn ? chiaveFn(v) : null;
+        if (v.codArt === cof.codicePezzo) {
+          pezziTipo += v.pezzi;
+          accumula(chiave, cof.id, v.pezzi, 0);
+        }
+        if (cof.codiciFatturato.indexOf(v.codArt) !== -1) {
+          fattTipo += v.importo;
+          accumula(chiave, cof.id, 0, v.importo);
+        }
+      }
+    } else if (cof.modo === 'kit') {
+      // Raggruppa per documento: 1 cofanetto = 1 pezzo di ogni codice del kit
+      var docs = {};
+      for (var i = 0; i < vendite.length; i++) {
+        var v = vendite[i];
+        if (cof.codiciKit.indexOf(v.codArt) === -1) continue;
+        if (!docs[v.numDoc]) docs[v.numDoc] = { q: {}, imp: 0, chiave: chiaveFn ? chiaveFn(v) : null };
+        docs[v.numDoc].q[v.codArt] = (docs[v.numDoc].q[v.codArt] || 0) + v.pezzi;
+        docs[v.numDoc].imp += v.importo;
+      }
+      for (var nd in docs) {
+        var d = docs[nd];
+        var minPezzi = null;
+        for (var c = 0; c < cof.codiciKit.length; c++) {
+          var q = d.q[cof.codiciKit[c]] || 0;
+          if (minPezzi === null || q < minPezzi) minPezzi = q;
+        }
+        if (!minPezzi || minPezzi <= 0) continue;
+        // Il fatturato della confezione e' quello delle righe complete:
+        // se nello stesso documento ci sono bottiglie sciolte in piu', le escludo in proporzione
+        var pezziKitTot = 0;
+        for (var c = 0; c < cof.codiciKit.length; c++) pezziKitTot += (d.q[cof.codiciKit[c]] || 0);
+        var quota = pezziKitTot > 0 ? (minPezzi * cof.codiciKit.length) / pezziKitTot : 0;
+        var impConf = d.imp * quota;
+        pezziTipo += minPezzi;
+        fattTipo += impConf;
+        accumula(d.chiave, cof.id, minPezzi, impConf);
+      }
+    }
+
+    tipi.push({ id: cof.id, nome: cof.nome, pezzi: pezziTipo, fatturato: fattTipo, bottiglieIncluse: !!cof.bottiglieIncluse });
+    totale += pezziTipo;
+    fattTot += fattTipo;
+  }
+
+  return { totale: totale, fatturato: fattTot, tipi: tipi, perChiave: perChiave };
 }
 
 function EUR(n) { return new Intl.NumberFormat('it-IT', {style:'currency', currency:'EUR', minimumFractionDigits:2, maximumFractionDigits:2}).format(n); }
@@ -966,6 +1110,7 @@ function cleanData(raw) {
       tipoRiga: tipoRiga,
       tipoDoc: tipoDoc,
       numDoc: String(r.Num_Doc || '').trim(),
+      codArt: String(r.Cod_Articolo || '').trim(),
       dataStr: dataStr,
       articolo: articoloStr,
       tipologia: String(r.Descr_Merceologica || '').trim(),
@@ -1099,68 +1244,116 @@ function togglePeriodo() {
   document.getElementById('to-group').style.display = p === 'RANGE' ? 'flex' : 'none';
 }
 
+// Anno di riferimento selezionato in testata (fallback 2026)
+function annoRiferimento() {
+  var el = document.getElementById('anno');
+  var a = el ? parseInt(el.value) : NaN;
+  return isNaN(a) ? 2026 : a;
+}
+
+// REGOLA UNICA DI CONFRONTO SUI GIORNI
+// Finche' il mese piu' recente con dati e' ANCORA IN CORSO, il confronto con
+// l'anno precedente si fa a parita' di giorni: entrambi gli anni vengono tagliati
+// all'ultimo giorno con movimenti. Quando quel mese e' CHIUSO (oggi siamo gia' nel
+// mese successivo) il confronto torna a mese pieno su entrambi gli anni.
+// Cosi' grafico YTD, KPI e vista "Mese singolo" danno sempre gli stessi numeri.
+function getTaglioGiorno(anno) {
+  var maxMese = 0, maxGiorno = 0;
+  for (var i = 0; i < D.length; i++) {
+    if (D[i].anno !== anno) continue;
+    if (D[i].mese > maxMese || (D[i].mese === maxMese && D[i].giorno > maxGiorno)) {
+      maxMese = D[i].mese;
+      maxGiorno = D[i].giorno;
+    }
+  }
+  if (maxMese === 0) {
+    return { maxMese: 12, maxGiorno: 31, ultimoGiornoMese: 31, attivo: false };
+  }
+  // new Date(anno, mese, 0) = ultimo giorno di quel mese (mese qui e' 1-based)
+  var ultimoGiornoMese = new Date(anno, maxMese, 0).getDate();
+  var oggi = new Date();
+  var meseChiuso = (oggi.getFullYear() > anno) ||
+                   (oggi.getFullYear() === anno && (oggi.getMonth() + 1) > maxMese);
+  return {
+    maxMese: maxMese,
+    maxGiorno: maxGiorno || ultimoGiornoMese,
+    ultimoGiornoMese: ultimoGiornoMese,
+    attivo: !meseChiuso
+  };
+}
+
 function getPeriodoFilter() {
   var p = document.getElementById('periodo').value;
+  var t = getTaglioGiorno(annoRiferimento());
+
   if (p === 'YTD') {
-    // Trova l'ultimo giorno disponibile nel 2026
-    var maxMese = 0, maxGiorno = 0;
-    for (var i = 0; i < D.length; i++) {
-      if (D[i].anno === 2026) {
-        if (D[i].mese > maxMese || (D[i].mese === maxMese && D[i].giorno > maxGiorno)) {
-          maxMese = D[i].mese;
-          maxGiorno = D[i].giorno;
-        }
-      }
-    }
-    if (maxMese === 0) maxMese = 12;
+    var giornoFine = t.attivo ? t.maxGiorno : t.ultimoGiornoMese;
     return {
       mode: 'YTD',
       da: 1,
-      a: maxMese,
-      giornoMax: maxGiorno || 31,
-      label: 'YTD (1 gen - ' + (maxGiorno || '') + ' ' + meseNome(maxMese).toLowerCase() + ')'
+      a: t.maxMese,
+      meseTaglio: t.maxMese,
+      tagliaGiorno: t.attivo,
+      giornoMax: giornoFine,
+      label: 'YTD (1 gen - ' + giornoFine + ' ' + meseNome(t.maxMese).toLowerCase() + ')' +
+             (t.attivo ? ' - mese in corso' : '')
     };
   }
+  // Mese / trimestre / range: MAI tagliati sul giorno.
+  // L'anno precedente viene sempre contato a mese intero, perche' questa e' la
+  // vista usata per dare all'agente l'obiettivo del mese (stesso mese 2025 pieno).
+  // A mese chiuso coincide comunque con lo YTD, che a quel punto non taglia piu'.
   if (p === 'MESE') {
     var m = parseInt(document.getElementById('mese-singolo').value);
+    var inCorsoM = t.attivo && m === t.maxMese;
     return {
       mode: 'MESE',
       da: m,
       a: m,
+      meseTaglio: t.maxMese,
+      tagliaGiorno: false,
       giornoMax: 31,
-      label: meseNome(m)
+      label: meseNome(m) +
+             (inCorsoM ? ' (' + annoRiferimento() + ' al ' + t.maxGiorno + ', ' + (annoRiferimento() - 1) + ' mese intero)' : '')
     };
   }
   if (p === 'TRIMESTRE') {
     var q = parseInt(document.getElementById('trimestre-sel').value);
     var da = (q - 1) * 3 + 1;
     var a = da + 2;
+    var inCorsoQ = t.attivo && t.maxMese >= da && t.maxMese <= a;
     return {
       mode: 'TRIMESTRE',
       da: da,
       a: a,
+      meseTaglio: t.maxMese,
+      tagliaGiorno: false,
       giornoMax: 31,
-      label: 'Q' + q + ' (' + meseNome(da) + ' - ' + meseNome(a) + ')'
+      label: 'Q' + q + ' (' + meseNome(da) + ' - ' + meseNome(a) + ')' +
+             (inCorsoQ ? ' - ' + annoRiferimento() + ' al ' + t.maxGiorno + ' ' + meseAbbr(t.maxMese).toLowerCase() : '')
     };
   }
   var da = parseInt(document.getElementById('mese-da').value);
   var a = parseInt(document.getElementById('mese-a').value);
+  var inCorsoR = t.attivo && t.maxMese >= da && t.maxMese <= a;
   return {
     mode: 'RANGE',
     da: da,
     a: a,
+    meseTaglio: t.maxMese,
+    tagliaGiorno: false,
     giornoMax: 31,
-    label: meseNome(da) + ' - ' + meseNome(a)
+    label: meseNome(da) + ' - ' + meseNome(a) +
+           (inCorsoR ? ' - ' + annoRiferimento() + ' al ' + t.maxGiorno + ' ' + meseAbbr(t.maxMese).toLowerCase() : '')
   };
 }
 
-// Filtra le righe in base al periodo. Per YTD usa anche il giorno (confronto preciso)
+// Filtra le righe in base al periodo.
+// Il taglio sul giorno scatta SOLO sul mese ancora in corso (vedi getTaglioGiorno):
+// a mese chiuso entrambi gli anni vengono contati per intero.
 function inPeriodo(row, periodo) {
   if (row.mese < periodo.da || row.mese > periodo.a) return false;
-  // Se YTD e siamo nell'ultimo mese, filtra anche per giorno
-  if (periodo.mode === 'YTD' && row.mese === periodo.a) {
-    if (row.giorno > periodo.giornoMax) return false;
-  }
+  if (periodo.tagliaGiorno && row.mese === periodo.meseTaglio && row.giorno > periodo.giornoMax) return false;
   return true;
 }
 
@@ -1308,8 +1501,8 @@ function calcolaTrendMensile(dati, anno, periodo) {
     if (r.tipoRiga !== 'Vendita') continue;
     // Per il trend, applica il filtro periodo (mese range)
     if (r.mese < periodo.da || r.mese > periodo.a) continue;
-    // Per YTD applica anche il filtro giorno sull'ultimo mese
-    if (periodo.mode === 'YTD' && r.mese === periodo.a && r.giorno > periodo.giornoMax) continue;
+    // Stesso taglio sul giorno usato dai KPI: solo sul mese ancora in corso
+    if (periodo.tagliaGiorno && r.mese === periodo.meseTaglio && r.giorno > periodo.giornoMax) continue;
     trend[r.mese] += r.importo;
   }
   return trend;
@@ -1360,6 +1553,13 @@ function generaReport() {
     
     var trend26 = calcolaTrendMensile(dati, anno, periodo);
     var trend25 = calcolaTrendMensile(dati, annoP, periodo);
+
+    // Cofanetti: conteggio per il periodo, raggruppato per cliente (vista agente) o per agente (vista Italia)
+    var chiaveCof = (vista === 'ITALIA')
+      ? function(v) { return v.agente; }
+      : function(v) { return v.cliente; };
+    var cof26 = calcolaCofanetti(d26.vendite, chiaveCof);
+    var cof25 = calcolaCofanetti(d25.vendite, chiaveCof);
     
     var listaItems = [];
     
@@ -1411,7 +1611,9 @@ function generaReport() {
           b26Eq: a26.btlEq, b25Eq: a25.btlEq,
           pm26: PM(a26.fatt, a26.btlEq), pm25: PM(a25.fatt, a25.btlEq),
           nClienti26: Object.keys(a26.clienti).length,
-          nClienti25: Object.keys(a25.clienti).length
+          nClienti25: Object.keys(a25.clienti).length,
+          cof26: (cof26.perChiave[a] ? cof26.perChiave[a].totale : 0),
+          cof25: (cof25.perChiave[a] ? cof25.perChiave[a].totale : 0)
         });
       }
     } else {
@@ -1440,7 +1642,9 @@ function generaReport() {
           b26: c26.btl, b25: c25.btl,
           b26Eq: c26.btlEq, b25Eq: c25.btlEq,
           pm26: PM(c26.fatt, c26.btlEq), pm25: PM(c25.fatt, c25.btlEq),
-          ordini: c26.ordini
+          ordini: c26.ordini,
+          cof26: (cof26.perChiave[c] ? cof26.perChiave[c].totale : 0),
+          cof25: (cof25.perChiave[c] ? cof25.perChiave[c].totale : 0)
         });
       }
     }
@@ -1517,6 +1721,7 @@ function generaReport() {
       d26: d26, d25: d25, refs26: refs26, refs25: refs25,
       fmt26: fmt26, fmt25: fmt25,
       trend26: trend26, trend25: trend25,
+      cof26: cof26, cof25: cof25,
       tutti: listaItems, attivi: attivi, calo: calo, assenti: assenti,
       nuovi: nuovi, crescita: crescita, persi: persi,
       portafoglio: portafoglio, confermati: confermati,
@@ -1554,6 +1759,9 @@ function renderReport() {
   html += '<div class="kpi-card"><div class="kpi-label">Ordini ' + r.anno + '</div><div class="kpi-value">' + NUM(r.d26.ordini) + '</div><div class="kpi-sub">vs ' + NUM(r.d25.ordini) + '</div><div class="kpi-sub"><span class="' + (r.d26.ordini-r.d25.ordini>=0?'text-green':'text-red') + '" style="font-weight:700">' + NUMsign(r.d26.ordini-r.d25.ordini) + '</span> <span class="badge ' + (dOrd>=0?'badge-up':'badge-down') + '">' + PCTsign(dOrd) + '</span></div></div>';
   html += '</div>';
   
+  // ===== COFANETTI =====
+  html += buildCofanettiSection(r);
+
   // Grafico andamento mensile
   html += '<div class="chart-wrap">';
   html += '<div class="chart-title">Andamento mensile fatturato — ' + escapeHTML(r.periodo.label) + '</div>';
@@ -1622,7 +1830,8 @@ function renderReport() {
   
   // Tabella inline (sempre visibile per scheda agente, opzionale per Italia)
   html += '<div class="section"><div class="section-title">' + entityLabelCap + ' — dettaglio (' + r.tutti.length + ')</div>';
-  html += buildMainTable(r.tutti, r.isItalia, r.dati, r.anno, r.annoP);
+  var mostraCof = !!(r.cof26 && (r.cof26.totale > 0 || (r.cof25 && r.cof25.totale > 0)));
+  html += buildMainTable(r.tutti, r.isItalia, r.dati, r.anno, r.annoP, mostraCof);
   html += '</div>';
   
   // Rotazione referenze — DONUT
@@ -1760,7 +1969,7 @@ function bindMainRowClicks(r) {
   }
 }
 
-function buildMainTable(data, isItalia, dati, anno, annoP) {
+function buildMainTable(data, isItalia, dati, anno, annoP, mostraCofanetti) {
   var html = '<div class="table-wrap"><div class="table-scroll"><table id="main-tbl">';
   html += '<thead><tr>';
   if (isItalia) {
@@ -1772,7 +1981,8 @@ function buildMainTable(data, isItalia, dati, anno, annoP) {
     html += '<th data-col="5" data-type="num" class="text-right">Var % <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
     html += '<th data-col="6" data-type="num" class="text-right">Bott. 26 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
     html += '<th data-col="7" data-type="num" class="text-right">Bott. 25 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
-    html += '<th data-col="8" data-type="num" class="text-right">PM 2026 <span class="sort-arrow">▼</span></th>';
+    html += '<th data-col="8" data-type="num" class="text-right">PM 2026 <span class="sort-arrow">▼</span>' + (mostraCofanetti ? '<span class="col-resize"></span>' : '') + '</th>';
+    if (mostraCofanetti) html += '<th data-col="9" data-type="num" class="text-right" title="Confezioni regalo vendute nel periodo">Cofan. <span class="sort-arrow">▼</span></th>';
   } else {
     html += '<th data-col="0" data-type="str">Cliente <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
     html += '<th data-col="1" data-type="str">Città <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
@@ -1782,11 +1992,12 @@ function buildMainTable(data, isItalia, dati, anno, annoP) {
     html += '<th data-col="5" data-type="num" class="text-right">Var % <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
     html += '<th data-col="6" data-type="num" class="text-right">Bott. 26 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
     html += '<th data-col="7" data-type="num" class="text-right">Bott. 25 <span class="sort-arrow">▼</span><span class="col-resize"></span></th>';
-    html += '<th data-col="8" data-type="num" class="text-right">PM 2026 <span class="sort-arrow">▼</span></th>';
+    html += '<th data-col="8" data-type="num" class="text-right">PM 2026 <span class="sort-arrow">▼</span>' + (mostraCofanetti ? '<span class="col-resize"></span>' : '') + '</th>';
+    if (mostraCofanetti) html += '<th data-col="9" data-type="num" class="text-right" title="Confezioni regalo vendute nel periodo">Cofan. <span class="sort-arrow">▼</span></th>';
   }
   html += '</tr></thead><tbody>';
   
-  var totF26=0,totF25=0,totB26=0,totB25=0;
+  var totF26=0,totF25=0,totB26=0,totB25=0,totCof=0;
   
   for (var i = 0; i < data.length; i++) {
     var c = data[i];
@@ -1809,13 +2020,17 @@ function buildMainTable(data, isItalia, dati, anno, annoP) {
     html += '<td class="text-right">' + NUM(c.b26Eq) + '</td>';
     html += '<td class="text-right">' + NUM(c.b25Eq) + '</td>';
     html += '<td class="text-right">' + EUR(c.pm26) + '</td>';
+    if (mostraCofanetti) {
+      totCof += (c.cof26 || 0);
+      html += '<td class="text-right' + (c.cof26 ? '' : ' text-muted') + '">' + (c.cof26 ? NUM(c.cof26) : '\u2014') + '</td>';
+    }
     html += '</tr>';
 
     // Riga fissa con il dettaglio mensile (solo vista agente, sempre 12 mesi interi)
     if (!isItalia && dati) {
       var m26 = calcolaTrendMensileCliente(dati, c.nome, anno);
       var m25 = calcolaTrendMensileCliente(dati, c.nome, annoP);
-      html += '<tr class="month-subrow"><td class="subrow-blank"></td><td class="subrow-content" colspan="8"><div style="display:flex">';
+      html += '<tr class="month-subrow"><td class="subrow-blank"></td><td class="subrow-content" colspan="' + (mostraCofanetti ? 9 : 8) + '"><div style="display:flex">';
       for (var m = 1; m <= 12; m++) {
         html += '<div class="month-cell">';
         html += '<div class="month-cell-label">' + meseAbbr(m) + '</div>';
@@ -1842,8 +2057,9 @@ function buildMainTable(data, isItalia, dati, anno, annoP) {
   html += '<td class="text-right">' + NUM(totB26) + '</td>';
   html += '<td class="text-right">' + NUM(totB25) + '</td>';
   html += '<td class="text-right">' + EUR(totPM) + '</td>';
+  if (mostraCofanetti) html += '<td class="text-right">' + NUM(totCof) + '</td>';
   html += '</tr>';
-  
+
   html += '</tbody></table></div></div>';
   return html;
 }
@@ -2055,6 +2271,68 @@ function buildDonutReferenze(r) {
   return html;
 }
 
+// Sezione "Cofanetti": una card per tipo + elenco di chi li ha presi.
+// Compare solo se nel periodo ci sono cofanetti (quest'anno o l'anno prima).
+function buildCofanettiSection(r) {
+  var c26 = r.cof26, c25 = r.cof25;
+  if (!c26 || (c26.totale === 0 && (!c25 || c25.totale === 0))) return '';
+
+  var html = '<div class="section"><div class="section-title">Cofanetti ' + r.anno + '</div>';
+
+  // Card: una per tipo + totale
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:14px">';
+  for (var i = 0; i < c26.tipi.length; i++) {
+    var t = c26.tipi[i];
+    var t25 = null;
+    for (var j = 0; c25 && j < c25.tipi.length; j++) if (c25.tipi[j].id === t.id) t25 = c25.tipi[j];
+    var prec = t25 ? t25.pezzi : 0;
+    var delta = t.pezzi - prec;
+    html += '<div class="kpi-card">';
+    html += '<div class="kpi-label">' + escapeHTML(t.nome) + '</div>';
+    html += '<div class="kpi-value">' + NUM(t.pezzi) + '</div>';
+    html += '<div class="kpi-sub">' + EUR(t.fatturato) + ' di fatturato</div>';
+    html += '<div class="kpi-sub">vs ' + NUM(prec) + ' nel ' + r.annoP + ' <span class="' + (delta >= 0 ? 'text-green' : 'text-red') + '" style="font-weight:700">' + NUMsign(delta) + '</span></div>';
+    html += '</div>';
+  }
+  html += '<div class="kpi-card" style="border-left:4px solid var(--gold)">';
+  html += '<div class="kpi-label">Totale confezioni</div>';
+  html += '<div class="kpi-value">' + NUM(c26.totale) + '</div>';
+  html += '<div class="kpi-sub">' + EUR(c26.fatturato) + ' di fatturato</div>';
+  html += '<div class="kpi-sub">vs ' + NUM(c25 ? c25.totale : 0) + ' nel ' + r.annoP + '</div>';
+  html += '</div>';
+  html += '</div>';
+
+  // Elenco di chi li ha presi (clienti nella vista agente, agenti nella vista Italia)
+  var chiavi = Object.keys(c26.perChiave).filter(function(k) { return c26.perChiave[k].totale > 0; });
+  if (chiavi.length) {
+    chiavi.sort(function(a, b) { return c26.perChiave[b].totale - c26.perChiave[a].totale; });
+    html += '<div class="table-wrap"><div class="table-scroll"><table>';
+    html += '<thead><tr><th>' + (r.isItalia ? 'Agente' : 'Cliente') + '</th>';
+    for (var i = 0; i < c26.tipi.length; i++) html += '<th class="text-right">' + escapeHTML(c26.tipi[i].nome) + '</th>';
+    html += '<th class="text-right">Totale</th><th class="text-right">Fatturato</th></tr></thead><tbody>';
+    var tt = 0, tf = 0;
+    for (var i = 0; i < chiavi.length; i++) {
+      var k = chiavi[i], v = c26.perChiave[k];
+      html += '<tr><td>' + escapeHTML(k) + '</td>';
+      for (var j = 0; j < c26.tipi.length; j++) {
+        var n = v.tipi[c26.tipi[j].id] || 0;
+        html += '<td class="text-right' + (n ? '' : ' text-muted') + '">' + (n ? NUM(n) : '—') + '</td>';
+      }
+      html += '<td class="text-right">' + NUM(v.totale) + '</td>';
+      html += '<td class="text-right">' + EUR(v.fatturato) + '</td></tr>';
+      tt += v.totale; tf += v.fatturato;
+    }
+    html += '<tr class="tot-row"><td>TOTALE (' + chiavi.length + ')</td>';
+    for (var j = 0; j < c26.tipi.length; j++) html += '<td class="text-right">' + NUM(c26.tipi[j].pezzi) + '</td>';
+    html += '<td class="text-right">' + NUM(tt) + '</td><td class="text-right">' + EUR(tf) + '</td></tr>';
+    html += '</tbody></table></div></div>';
+  }
+
+  html += '<div class="hint">Le confezioni concorrono al fatturato. Le bottiglie della Collezione Privata restano conteggiate anche tra le bottiglie, i calici no (non sono vino).</div>';
+  html += '</div>';
+  return html;
+}
+
 // Sezione "Vendite per formato": 4 KPI card + matrice referenza × formato
 function buildFormatiSection(r) {
   var fmt26 = r.fmt26, fmt25 = r.fmt25;
@@ -2237,9 +2515,10 @@ function buildChart(t26, t25, anno, annoP, periodo) {
     svg += '<text x="' + xc(m) + '" y="' + (h-12) + '" text-anchor="middle" font-size="10" fill="#7a6b6c" font-weight="600">' + meseAbbr(m) + '</text>';
   }
   
-  // Indicatore "aggiornato al" per YTD
-  if (periodo && periodo.mode === 'YTD' && periodo.giornoMax > 0 && periodo.giornoMax < 28) {
-    svg += '<text x="' + (w-padR) + '" y="14" text-anchor="end" font-size="9" fill="#7a6b6c" font-style="italic">aggiornato al ' + periodo.giornoMax + ' ' + meseAbbr(periodo.a).toLowerCase() + '</text>';
+  // Indicatore "aggiornato al": compare SEMPRE quando il mese in corso viene
+  // tagliato a parita' di giorni, cosi' il troncamento non e' mai silenzioso
+  if (periodo && periodo.tagliaGiorno && periodo.meseTaglio >= mesiDa && periodo.meseTaglio <= mesiA) {
+    svg += '<text x="' + (w-padR) + '" y="14" text-anchor="end" font-size="9" fill="#7a6b6c" font-style="italic">entrambi gli anni al ' + periodo.giornoMax + ' ' + meseAbbr(periodo.meseTaglio).toLowerCase() + '</text>';
   }
   
   // Linea 2025 (oro tratteggiata)
@@ -2563,7 +2842,29 @@ function renderFVCliente(state) {
   html += '<div class="kpi-card"><div class="kpi-label">Prezzo Medio</div><div class="kpi-value">' + EUR(pm26) + '</div><div class="kpi-sub">vs ' + EUR(pm25) + '</div><div class="kpi-sub"><span class="' + (pm26-pm25>=0?'text-green':'text-red') + '" style="font-weight:700">' + EURsign(pm26-pm25) + '</span> <span class="badge ' + (dPM>=0?'badge-up':'badge-down') + '">' + PCTsign(dPM) + '</span></div></div>';
   html += '<div class="kpi-card"><div class="kpi-label">Fatture ' + anno + '</div><div class="kpi-value">' + fattureArr.length + '</div><div class="kpi-sub">documenti emessi</div></div>';
   html += '</div>';
-  
+
+  // Cofanetti del cliente
+  var cofCli26 = calcolaCofanetti(v26, null);
+  var cofCli25 = calcolaCofanetti(v25, null);
+  if (cofCli26.totale > 0 || cofCli25.totale > 0) {
+    html += '<div class="section"><div class="section-title">Cofanetti ' + anno + '</div>';
+    html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px">';
+    for (var i = 0; i < cofCli26.tipi.length; i++) {
+      var tc = cofCli26.tipi[i];
+      var tp = 0;
+      for (var j = 0; j < cofCli25.tipi.length; j++) if (cofCli25.tipi[j].id === tc.id) tp = cofCli25.tipi[j].pezzi;
+      html += '<div class="kpi-card"><div class="kpi-label">' + escapeHTML(tc.nome) + '</div>';
+      html += '<div class="kpi-value">' + NUM(tc.pezzi) + '</div>';
+      html += '<div class="kpi-sub">' + EUR(tc.fatturato) + ' di fatturato</div>';
+      html += '<div class="kpi-sub">vs ' + NUM(tp) + ' nel ' + annoP + '</div></div>';
+    }
+    html += '<div class="kpi-card" style="border-left:4px solid var(--gold)"><div class="kpi-label">Totale confezioni</div>';
+    html += '<div class="kpi-value">' + NUM(cofCli26.totale) + '</div>';
+    html += '<div class="kpi-sub">' + EUR(cofCli26.fatturato) + ' di fatturato</div>';
+    html += '<div class="kpi-sub">vs ' + NUM(cofCli25.totale) + ' nel ' + annoP + '</div></div>';
+    html += '</div></div>';
+  }
+
   // Referenze cliente — DONUT
   html += '<div class="section"><div class="section-title">Rotazione referenze ' + anno + '</div>';
   html += buildDonutReferenzeCliente(refs26, refs25, b26Eq, anno, annoP);
@@ -3857,19 +4158,16 @@ function exportMultiPeriodoPdf() {
   // Periodo A: quello corrente (mese/trimestre selezionato)
   var periodoA = r.periodo;
   
-  // Periodo B: YTD (ricalcola il giornoMax dal dataset)
-  var maxMese = 0, maxGiorno = 0;
-  for (var i = 0; i < D.length; i++) {
-    if (D[i].anno === anno) {
-      if (D[i].mese > maxMese || (D[i].mese === maxMese && D[i].giorno > maxGiorno)) {
-        maxMese = D[i].mese; maxGiorno = D[i].giorno;
-      }
-    }
-  }
-  if (maxMese === 0) maxMese = 12;
+  // Periodo B: YTD (stessa regola di taglio usata ovunque nell'app)
+  var tB = getTaglioGiorno(anno);
+  var giornoFineB = tB.attivo ? tB.maxGiorno : tB.ultimoGiornoMese;
   var periodoB = {
-    mode: 'YTD', da: 1, a: maxMese, giornoMax: maxGiorno || 31,
-    label: 'YTD (1 gen - ' + maxGiorno + ' ' + meseNome(maxMese).toLowerCase() + ')'
+    mode: 'YTD', da: 1, a: tB.maxMese,
+    meseTaglio: tB.maxMese,
+    tagliaGiorno: tB.attivo,
+    giornoMax: giornoFineB,
+    label: 'YTD (1 gen - ' + giornoFineB + ' ' + meseNome(tB.maxMese).toLowerCase() + ')' +
+           (tB.attivo ? ' - mese in corso' : '')
   };
   
   // Calcola i 4 dataset (2 periodi × 2 anni)
@@ -4590,15 +4888,21 @@ function addClientiTablePage(doc, r, pageW, margin) {
   drawSectionTitle(doc, 'Elenco ' + entityLbl + ' (' + orderedTutti.length + ')', margin, y);
   y += 5;
   
-  var totF26 = 0, totF25 = 0, totB26Eq = 0, totB25Eq = 0;
+  var mostraCof = !!(r.cof26 && (r.cof26.totale > 0 || (r.cof25 && r.cof25.totale > 0)));
+  var totF26 = 0, totF25 = 0, totB26Eq = 0, totB25Eq = 0, totCof = 0;
   var body = [];
   for (var i = 0; i < orderedTutti.length; i++) {
     var c = orderedTutti[i];
     var varP = c.f25 > 0 ? ((c.f26 - c.f25) / c.f25) * 100 : (c.f26 > 0 ? 100 : -100);
+    totCof += (c.cof26 || 0);
     if (r.isItalia) {
-      body.push([c.nome, c.nClienti26 || 0, EURpdf(c.f26), EURpdf(c.f25), EURsignPdf(c.f26-c.f25), PCTsign(varP), NUM(c.b26Eq || 0), NUM(c.b25Eq || 0), EURpdf(c.pm26)]);
+      var rigaIt = [c.nome, c.nClienti26 || 0, EURpdf(c.f26), EURpdf(c.f25), EURsignPdf(c.f26-c.f25), PCTsign(varP), NUM(c.b26Eq || 0), NUM(c.b25Eq || 0), EURpdf(c.pm26)];
+      if (mostraCof) rigaIt.push(c.cof26 ? NUM(c.cof26) : '-');
+      body.push(rigaIt);
     } else {
-      body.push([c.nome, c.citta || '', c.agente, EURpdf(c.f26), EURpdf(c.f25), EURsignPdf(c.f26-c.f25), PCTsign(varP), NUM(c.b26Eq || 0), NUM(c.b25Eq || 0), EURpdf(c.pm26)]);
+      var rigaCl = [c.nome, c.citta || '', c.agente, EURpdf(c.f26), EURpdf(c.f25), EURsignPdf(c.f26-c.f25), PCTsign(varP), NUM(c.b26Eq || 0), NUM(c.b25Eq || 0), EURpdf(c.pm26)];
+      if (mostraCof) rigaCl.push(c.cof26 ? NUM(c.cof26) : '-');
+      body.push(rigaCl);
       // Riga fissa con il dettaglio mensile (sempre 12 mesi interi, come a schermo)
       if (r.dati) {
         var m26t = calcolaTrendMensileCliente(r.dati, c.nome, r.anno);
@@ -4607,7 +4911,7 @@ function addClientiTablePage(doc, r, pageW, margin) {
         for (var m = 1; m <= 12; m++) { m26fmt.push(fmtMeseCompatto(m26t[m])); m25fmt.push(fmtMeseCompatto(m25t[m])); }
         body.push([
           { content: '', styles: { fillColor: [250, 247, 247] } },
-          { content: '', colSpan: 9, styles: { fillColor: [250, 247, 247], minCellHeight: 10 }, monthRow: true, m26: m26fmt, m25: m25fmt }
+          { content: '', colSpan: (mostraCof ? 10 : 9), styles: { fillColor: [250, 247, 247], minCellHeight: 10 }, monthRow: true, m26: m26fmt, m25: m25fmt }
         ]);
       }
     }
@@ -4616,25 +4920,30 @@ function addClientiTablePage(doc, r, pageW, margin) {
   }
   var totPM = PM(totF26, totB26Eq);
   var totDF = totF25 > 0 ? ((totF26 - totF25) / totF25) * 100 : 0;
-  if (r.isItalia) {
-    body.push(['TOTALE', '', EURpdf(totF26), EURpdf(totF25), EURsignPdf(totF26-totF25), PCTsign(totDF), NUM(totB26Eq), NUM(totB25Eq), EURpdf(totPM)]);
-  } else {
-    body.push(['TOTALE', '', '', EURpdf(totF26), EURpdf(totF25), EURsignPdf(totF26-totF25), PCTsign(totDF), NUM(totB26Eq), NUM(totB25Eq), EURpdf(totPM)]);
-  }
+  var rigaTot = r.isItalia
+    ? ['TOTALE', '', EURpdf(totF26), EURpdf(totF25), EURsignPdf(totF26-totF25), PCTsign(totDF), NUM(totB26Eq), NUM(totB25Eq), EURpdf(totPM)]
+    : ['TOTALE', '', '', EURpdf(totF26), EURpdf(totF25), EURsignPdf(totF26-totF25), PCTsign(totDF), NUM(totB26Eq), NUM(totB25Eq), EURpdf(totPM)];
+  if (mostraCof) rigaTot.push(NUM(totCof));
+  body.push(rigaTot);
 
-  var heads = r.isItalia
-    ? [['Agente', 'Clienti', 'Fatt. 2026', 'Fatt. 2025', 'Var EUR', 'Var %', 'Bott. 26', 'Bott. 25', 'PM 26']]
-    : [['Cliente', 'Citta', 'Agente', 'Fatt. 2026', 'Fatt. 2025', 'Var EUR', 'Var %', 'Bott. 26', 'Bott. 25', 'PM 26']];
+  var headRow = r.isItalia
+    ? ['Agente', 'Clienti', 'Fatt. 2026', 'Fatt. 2025', 'Var EUR', 'Var %', 'Bott. 26', 'Bott. 25', 'PM 26']
+    : ['Cliente', 'Citta', 'Agente', 'Fatt. 2026', 'Fatt. 2025', 'Var EUR', 'Var %', 'Bott. 26', 'Bott. 25', 'PM 26'];
+  if (mostraCof) headRow.push('Cofan.');
+  var heads = [headRow];
 
+  // Larghezze fisse sulle colonne di testo lungo: senza, i nomi lunghi vanno a capo
+  // e fanno saltare l'altezza delle righe
   var colStyles = r.isItalia
-    ? { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' }, 7: { halign: 'right' }, 8: { halign: 'right' } }
-    : { 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' }, 7: { halign: 'right' }, 8: { halign: 'right' }, 9: { halign: 'right' } };
+    ? { 0: { cellWidth: 55 }, 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' }, 7: { halign: 'right' }, 8: { halign: 'right' } }
+    : { 0: { cellWidth: 46 }, 1: { cellWidth: 25 }, 2: { cellWidth: 30 }, 3: { halign: 'right' }, 4: { halign: 'right' }, 5: { halign: 'right' }, 6: { halign: 'right' }, 7: { halign: 'right' }, 8: { halign: 'right' }, 9: { halign: 'right' } };
+  if (mostraCof) colStyles[r.isItalia ? 9 : 10] = { halign: 'right', cellWidth: 13 };
 
   doc.autoTable({
     head: heads, body: body, startY: y,
     theme: 'striped',
     headStyles: { fillColor: [114, 47, 55], textColor: 255, fontSize: 8 },
-    bodyStyles: { fontSize: 7 },
+    bodyStyles: { fontSize: 7, overflow: 'ellipsize' },
     columnStyles: colStyles,
     styles: { cellPadding: 1.5 },
     margin: { left: margin, right: margin },
