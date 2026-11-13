@@ -476,6 +476,9 @@ tr.month-subrow .subrow-content{padding:10px 14px 12px}
 .lock-err{color:var(--red);font-size:12px;min-height:16px;margin-bottom:8px}
 .lock-btn{width:100%;background:var(--wine);color:#fff;border:none;border-radius:10px;padding:12px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer}
 .lock-btn:disabled{opacity:.6;cursor:default}
+.lock-code-txt{width:100%;box-sizing:border-box;height:120px;border:1px solid var(--border);border-radius:10px;padding:10px;font-size:11px;font-family:monospace;word-break:break-all;margin-bottom:10px;background:#fcf9f9;color:var(--ink)}
+.lock-note{font-size:11.5px;color:var(--muted);line-height:1.5;margin-top:12px}
+.g-lock{background:#fff;border:1px solid var(--border);border-left:3px solid var(--gold);border-radius:12px;padding:16px 18px;margin-top:14px;font-size:13px;color:var(--muted);line-height:1.55}
 .lock-forgot{display:block;margin:14px auto 0;background:none;border:none;color:var(--muted);font-size:11.5px;text-decoration:underline;cursor:pointer;font-family:inherit}
 </style>
 </head>
@@ -492,6 +495,11 @@ tr.month-subrow .subrow-content{padding:10px 14px 12px}
     <label class="lock-rem"><input type="checkbox" id="lock-rem"> Ricordami su questo dispositivo per 30 giorni</label>
     <div class="lock-err" id="lock-err"></div>
     <button class="lock-btn" id="lock-btn" type="submit">Entra</button>
+    <div id="lock-code" style="display:none">
+      <textarea class="lock-code-txt" id="lock-code-txt" readonly></textarea>
+      <button type="button" class="lock-btn" id="lock-copy" onclick="lockCopyCode()">Copia codice</button>
+    </div>
+    <div class="lock-note" id="lock-note" style="display:none"></div>
     <button type="button" class="lock-forgot" id="lock-forgot" onclick="lockForgot()">Password dimenticata? Azzera i dati su questo dispositivo</button>
   </form>
 </div>
@@ -876,6 +884,7 @@ function idbSaveLastFile(binaryData, fileName, savedAt) {
       fileName: fileName,
       savedAt: savedAt || new Date().toISOString(),
       enc: 1,
+      kid: LOCK_KID,
       iv: enc.iv,
       data: enc.ct
     });
@@ -900,13 +909,26 @@ function idbClearLastFile() {
 
 // ============ BLOCCO CON PASSWORD ============
 // La password non viene salvata da nessuna parte. Da essa si ricava una chiave
-// (PBKDF2-SHA256) che serve a cifrare il file salvato. Per verificare la password
-// si conserva solo un piccolo testo di controllo cifrato con la stessa chiave.
+// (PBKDF2-SHA256) che cifra il file salvato sul dispositivo.
+//
+// Password unica (quando MOSNEL_CHIAVE è impostata): la stessa per tutti i
+// dispositivi. MOSNEL_CHIAVE contiene una chiave privata ECDH cifrata con la
+// password: chi conosce la password la apre e con essa decifra le giacenze.
+// Le giacenze sono cifrate con la chiave pubblica, quindi per aggiornarle non
+// serve conoscere la password. Il codice si genera aprendo l'app con ?attiva.
+//
+// Prima dell'attivazione (MOSNEL_CHIAVE = null) ogni dispositivo ha una sua
+// password, verificata con un piccolo testo di controllo in localStorage.
+var MOSNEL_CHIAVE = null;
 var LOCK_LS = 'mosnel_lock_v1';
 var LOCK_ITER = 310000;
+var LOCK_ITER_UNICA = 600000;
+var LOCK_MIN = 6;
 var LOCK_REMEMBER_DAYS = 30;
 var LOCK_CHECK = 'mosnel-ok';
 var LOCK_KEY = null;
+var LOCK_KID = null;
+var LOCK_PRIV = null;
 var lockMode = 'unlock';
 
 function b64e(buf) { var b = new Uint8Array(buf), s = ''; for (var i = 0; i < b.length; i++) s += String.fromCharCode(b[i]); return btoa(s); }
@@ -918,9 +940,9 @@ function bytesToBin(buf) {
   return out.join('');
 }
 
-function lockDeriveKey(pw, salt) {
+function lockDeriveKey(pw, salt, iter) {
   return crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']).then(function(base) {
-    return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: salt, iterations: LOCK_ITER, hash: 'SHA-256' },
+    return crypto.subtle.deriveKey({ name: 'PBKDF2', salt: salt, iterations: iter || LOCK_ITER, hash: 'SHA-256' },
       base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
   });
 }
@@ -934,27 +956,57 @@ function lockGetVerifier() {
   try { return JSON.parse(localStorage.getItem(LOCK_LS) || 'null'); } catch (e) { return null; }
 }
 
-// true se la chiave apre il testo di controllo, cioè se la password è giusta
-function lockCheckKey(key, v) {
+// Identifica la password in uso: serve a capire se un file salvato è apribile
+function lockCurrentKid() {
+  if (MOSNEL_CHIAVE) return 'u:' + MOSNEL_CHIAVE.s;
+  var v = lockGetVerifier();
+  return v ? 'd:' + v.salt : null;
+}
+
+// Verifica la chiave. Restituisce null se la password è sbagliata,
+// altrimenti un oggetto (con la chiave privata delle giacenze se c'è)
+function lockCheckKey(key) {
+  if (MOSNEL_CHIAVE) {
+    return crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64d(MOSNEL_CHIAVE.i) }, key, b64d(MOSNEL_CHIAVE.c)).then(function(pkcs8) {
+      return crypto.subtle.importKey('pkcs8', pkcs8, { name: 'ECDH', namedCurve: 'P-256' }, false, ['deriveKey']);
+    }).then(function(priv) { return { priv: priv }; }, function() { return null; });
+  }
+  var v = lockGetVerifier();
   return crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64d(v.iv) }, key, b64d(v.ct)).then(function(pt) {
-    return new TextDecoder().decode(pt) === LOCK_CHECK;
-  }, function() { return false; });
+    return new TextDecoder().decode(pt) === LOCK_CHECK ? {} : null;
+  }, function() { return null; });
 }
 
 function lockShowForm(mode, msg) {
   lockMode = mode;
-  var setup = mode === 'setup';
-  document.getElementById('lock-title').textContent = setup ? 'Crea una password' : 'Inserisci la password';
-  document.getElementById('lock-text').textContent = setup
-    ? "Protegge l'app e i dati salvati su questo dispositivo. Usa almeno 6 caratteri. Se la dimentichi non si può recuperare: dovrai ricaricare il file Excel e sceglierne una nuova."
+  var setup = mode === 'setup', attiva = mode === 'attiva';
+  var nuova = setup || attiva;
+  document.getElementById('lock-title').textContent = attiva ? 'Crea la password unica' : (setup ? 'Crea una password' : 'Inserisci la password');
+  document.getElementById('lock-text').textContent = attiva
+    ? "Sarà la password dell'app per tutti, giacenze comprese. Scrivila due volte e premi il pulsante: comparirà un codice da copiare e mandare a Claude. Il codice non contiene la password."
+    : setup
+    ? "Protegge l'app e i dati salvati su questo dispositivo. Usa almeno " + LOCK_MIN + " caratteri. Se la dimentichi non si può recuperare: dovrai ricaricare il file Excel e sceglierne una nuova."
     : "L'app è protetta. Inserisci la password per aprire i dati.";
   document.getElementById('lock-pw').value = '';
-  document.getElementById('lock-pw').setAttribute('autocomplete', setup ? 'new-password' : 'current-password');
+  document.getElementById('lock-pw').style.display = 'block';
+  document.getElementById('lock-pw').setAttribute('autocomplete', nuova ? 'new-password' : 'current-password');
   document.getElementById('lock-pw2').value = '';
-  document.getElementById('lock-pw2').style.display = setup ? 'block' : 'none';
-  document.getElementById('lock-btn').textContent = setup ? 'Crea password ed entra' : 'Entra';
+  document.getElementById('lock-pw2').style.display = nuova ? 'block' : 'none';
+  document.getElementById('lock-rem').parentNode.style.display = attiva ? 'none' : 'flex';
+  document.getElementById('lock-btn').style.display = 'block';
+  document.getElementById('lock-btn').textContent = attiva ? 'Genera il codice' : (setup ? 'Crea password ed entra' : 'Entra');
   document.getElementById('lock-btn').disabled = false;
-  document.getElementById('lock-forgot').style.display = setup ? 'none' : 'block';
+  document.getElementById('lock-code').style.display = 'none';
+  // Con la password unica non si può azzerare: la password è la stessa per tutti
+  document.getElementById('lock-forgot').style.display = (mode === 'unlock' && !MOSNEL_CHIAVE) ? 'block' : 'none';
+  var note = document.getElementById('lock-note');
+  if (attiva) {
+    note.textContent = "Consiglio: almeno 10 caratteri, ad esempio tre parole e un numero. La password apre dati pubblicati sul sito in forma cifrata, quindi una password corta si indovina più facilmente.";
+    note.style.display = 'block';
+  } else if (mode === 'unlock' && MOSNEL_CHIAVE) {
+    note.textContent = "La password è la stessa per tutti. Se non la ricordi chiedila a chi gestisce l'app.";
+    note.style.display = 'block';
+  } else note.style.display = 'none';
   document.getElementById('lock-err').textContent = msg || '';
   document.getElementById('lock-form').style.display = 'block';
   document.getElementById('lock-screen').style.display = 'flex';
@@ -969,16 +1021,17 @@ function lockInit() {
     document.getElementById('lock-form').innerHTML = '<h3>Browser non supportato</h3><p>Apri l\'app con un browser aggiornato (Safari, Chrome, Edge) dall\'indirizzo https.</p>';
     return;
   }
-  var v = lockGetVerifier();
-  if (!v) { lockShowForm('setup'); return; }
+  if (/[?&]attiva\b/.test(location.search)) { lockShowForm('attiva'); return; }
+  if (!MOSNEL_CHIAVE && !lockGetVerifier()) { lockShowForm('setup'); return; }
+  var kid = lockCurrentKid();
   idbGet(IDB_KEYS, 'remember').then(function(rec) {
-    if (!rec || !rec.key || !(rec.expires > Date.now())) {
+    if (!rec || !rec.key || !(rec.expires > Date.now()) || rec.kid !== kid) {
       if (rec) idbDelete(IDB_KEYS, 'remember');
       lockShowForm('unlock');
       return;
     }
-    return lockCheckKey(rec.key, v).then(function(ok) {
-      if (ok) lockUnlocked(rec.key);
+    return lockCheckKey(rec.key).then(function(res) {
+      if (res) lockUnlocked(rec.key, res);
       else { idbDelete(IDB_KEYS, 'remember'); lockShowForm('unlock'); }
     });
   }).catch(function() { lockShowForm('unlock'); });
@@ -991,54 +1044,96 @@ function lockSubmit(e) {
   var err = document.getElementById('lock-err');
   var btn = document.getElementById('lock-btn');
   err.textContent = '';
-  if (lockMode === 'setup') {
-    if (pw.length < 6) { err.textContent = 'La password deve avere almeno 6 caratteri.'; return; }
+  if (lockMode === 'setup' || lockMode === 'attiva') {
+    if (pw.length < LOCK_MIN) { err.textContent = 'La password deve avere almeno ' + LOCK_MIN + ' caratteri.'; return; }
     if (pw !== document.getElementById('lock-pw2').value) { err.textContent = 'Le due password non coincidono.'; return; }
   } else if (!pw) { err.textContent = 'Inserisci la password.'; return; }
   btn.disabled = true;
-  btn.textContent = 'Verifica...';
+  btn.textContent = lockMode === 'attiva' ? 'Generazione...' : 'Verifica...';
+  if (lockMode === 'attiva') { lockGeneraCodice(pw); return; }
   var p;
   if (lockMode === 'setup') {
     var salt = crypto.getRandomValues(new Uint8Array(16));
     p = lockDeriveKey(pw, salt).then(function(key) {
       return lockEncrypt(key, new TextEncoder().encode(LOCK_CHECK)).then(function(enc) {
         localStorage.setItem(LOCK_LS, JSON.stringify({ salt: b64e(salt), iv: b64e(enc.iv), ct: b64e(enc.ct) }));
-        // Un file cifrato con una password precedente non è più apribile: lo si elimina
-        return idbGetLastFile().then(function(rec) {
-          if (rec && rec.enc) return idbClearLastFile();
-        }).catch(function() {}).then(function() { return key; });
+        return { key: key, res: {} };
       });
     });
   } else {
-    var v = lockGetVerifier();
-    p = lockDeriveKey(pw, b64d(v.salt)).then(function(key) {
-      return lockCheckKey(key, v).then(function(ok) { return ok ? key : null; });
+    var salt2 = MOSNEL_CHIAVE ? b64d(MOSNEL_CHIAVE.s) : b64d(lockGetVerifier().salt);
+    var iter = MOSNEL_CHIAVE ? MOSNEL_CHIAVE.n : LOCK_ITER;
+    p = lockDeriveKey(pw, salt2, iter).then(function(key) {
+      return lockCheckKey(key).then(function(res) { return res ? { key: key, res: res } : null; });
     });
   }
-  p.then(function(key) {
-    if (!key) { lockShowForm('unlock', 'Password errata.'); return; }
+  p.then(function(ok) {
+    if (!ok) { lockShowForm('unlock', 'Password errata.'); return; }
     var after = remember
-      ? idbPut(IDB_KEYS, { id: 'remember', key: key, expires: Date.now() + LOCK_REMEMBER_DAYS * 86400000 })
+      ? idbPut(IDB_KEYS, { id: 'remember', key: ok.key, kid: lockCurrentKid(), expires: Date.now() + LOCK_REMEMBER_DAYS * 86400000 })
           .catch(function(e2) { console.warn('Impossibile ricordare il dispositivo:', e2); })
       : idbDelete(IDB_KEYS, 'remember');
-    return after.then(function() { lockUnlocked(key); });
+    return after.then(function() { lockUnlocked(ok.key, ok.res); });
   }).catch(function(e3) {
     console.error(e3);
     lockShowForm(lockMode, 'Errore: ' + (e3 && e3.message ? e3.message : e3));
   });
 }
 
-function lockUnlocked(key) {
+function lockUnlocked(key, res) {
   LOCK_KEY = key;
+  LOCK_KID = lockCurrentKid();
+  LOCK_PRIV = (res && res.priv) || null;
   document.getElementById('lock-screen').style.display = 'none';
   document.getElementById('lock-pw').value = '';
   document.getElementById('lock-pw2').value = '';
-  // Un file salvato prima dell'arrivo della password viene cifrato ora
+  giacenzeDecifra();
   idbGetLastFile().then(function(rec) {
-    if (rec && rec.data && !rec.enc) return idbSaveLastFile(rec.data, rec.fileName, rec.savedAt);
+    if (!rec || !rec.data) return;
+    // File salvato prima dell'arrivo della password: lo si cifra ora
+    if (!rec.enc) return idbSaveLastFile(rec.data, rec.fileName, rec.savedAt);
+    // File cifrato con una password diversa da quella attuale: non è apribile
+    var kidFile = rec.kid || (LOCK_KID && LOCK_KID.indexOf('d:') === 0 ? LOCK_KID : 'vecchio');
+    if (kidFile !== LOCK_KID) return idbClearLastFile();
   }).catch(function(err) { console.warn(err); }).then(function() {
     checkLastFileOnLoad();
   });
+}
+
+// Genera il codice della password unica (pagina ?attiva)
+function lockGeneraCodice(pw) {
+  var salt = crypto.getRandomValues(new Uint8Array(16));
+  var pair;
+  crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveKey']).then(function(kp) {
+    pair = kp;
+    return Promise.all([
+      crypto.subtle.exportKey('raw', kp.publicKey),
+      crypto.subtle.exportKey('pkcs8', kp.privateKey),
+      lockDeriveKey(pw, salt, LOCK_ITER_UNICA)
+    ]);
+  }).then(function(r) {
+    return lockEncrypt(r[2], r[1]).then(function(enc) {
+      var codice = { v: 1, s: b64e(salt), n: LOCK_ITER_UNICA, p: b64e(r[0]), i: b64e(enc.iv), c: b64e(enc.ct) };
+      document.getElementById('lock-code-txt').value = 'MOSNEL1:' + btoa(JSON.stringify(codice));
+      document.getElementById('lock-title').textContent = 'Codice pronto';
+      document.getElementById('lock-text').textContent = "Premi Copia codice e incollalo nella chat con Claude. Il codice non contiene la password. Ricordati la password: non si può recuperare.";
+      document.getElementById('lock-pw').style.display = 'none';
+      document.getElementById('lock-pw2').style.display = 'none';
+      document.getElementById('lock-btn').style.display = 'none';
+      document.getElementById('lock-note').style.display = 'none';
+      document.getElementById('lock-code').style.display = 'block';
+    });
+  }).catch(function(e) {
+    lockShowForm('attiva', 'Errore: ' + (e && e.message ? e.message : e));
+  });
+}
+
+function lockCopyCode() {
+  var t = document.getElementById('lock-code-txt');
+  var fatto = function() { document.getElementById('lock-copy').textContent = 'Copiato ✓'; };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(t.value).then(fatto, function() { t.select(); document.execCommand('copy'); fatto(); });
+  } else { t.select(); document.execCommand('copy'); fatto(); }
 }
 
 // Blocca l'app: dimentica il dispositivo e torna alla richiesta della password
@@ -2485,8 +2580,26 @@ function mostraAltriOrdCliMobile() {
 // Per ogni riga: [annata, capacita' in litri, etichettate, senza etichetta, nota]
 // Solo i due stati che servono: etichettato (codici C) e non etichettato (codici D).
 // Sur lattes e tiraggio sono esclusi di proposito: non sono vendibili.
-var GIAC_FOTO = '2026-11-13';
-var GIACENZE = []; // dati rimossi: ora sono cifrati
+// I dati sono cifrati (vedi BLOCCO CON PASSWORD): si aprono solo con la
+// password e vengono caricati in GIAC_FOTO e GIACENZE dopo lo sblocco.
+var GIACENZE_CIFRATE = null;
+var GIAC_FOTO = null;
+var GIACENZE = [];
+
+function giacenzeDecifra() {
+  if (!GIACENZE_CIFRATE || !LOCK_PRIV) return Promise.resolve(false);
+  var g = GIACENZE_CIFRATE;
+  return crypto.subtle.importKey('raw', b64d(g.e), { name: 'ECDH', namedCurve: 'P-256' }, false, []).then(function(epk) {
+    return crypto.subtle.deriveKey({ name: 'ECDH', public: epk }, LOCK_PRIV, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+  }).then(function(k) {
+    return crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64d(g.i) }, k, b64d(g.c));
+  }).then(function(pt) {
+    var d = JSON.parse(new TextDecoder().decode(pt));
+    GIAC_FOTO = d.foto;
+    GIACENZE = d.dati;
+    return true;
+  }).catch(function(e) { console.warn('Giacenze non decifrabili:', e); return false; });
+}
 
 var GIAC_FORMATO = { 0.75: 'Bottiglia 0,75', 1.5: 'Magnum 1,5', 3: 'Jeroboam 3' };
 var _giacFiltro = 'tutte';
@@ -2571,6 +2684,13 @@ function dataFotoIt() {
 }
 
 function renderGiacenze() {
+  if (!GIAC_FOTO) {
+    document.getElementById('giac-wrapper').innerHTML = '<div class="g-h1">Giacenze</div>' +
+      '<div class="g-lock">&#128274; Le giacenze sono protette e si aprono con la password unica dell\'app. ' +
+      (MOSNEL_CHIAVE ? 'Su questo dispositivo non è stato possibile aprirle: premi Blocca e rientra con la password.'
+                     : 'La password unica non è ancora stata attivata.') + '</div>';
+    return;
+  }
   var g = calcolaGiacenze();
   var html = '<div class="g-h1">Giacenze</div>';
   html += '<div class="g-sub">Foto di magazzino al <b>' + dataFotoIt() + '</b>';
