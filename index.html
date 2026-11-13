@@ -391,6 +391,63 @@ tr.month-subrow .subrow-content{padding:10px 14px 12px}
   .m-of-chk{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:var(--wine);margin:9px 0}
 }
 
+
+/* ===== Schede in alto: Report vendite / Giacenze ===== */
+.tabs{background:#fff;border-bottom:1px solid var(--border);padding:0 20px;display:flex;gap:4px;overflow-x:auto}
+.tab{padding:13px 20px 11px;font-size:13.5px;font-weight:600;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-1px;cursor:pointer;white-space:nowrap;background:none;border-left:none;border-right:none;border-top:none;font-family:inherit}
+.tab.on{color:var(--wine);border-bottom-color:var(--wine);font-weight:700}
+.tab .n{display:inline-block;background:var(--wine-light);border:1px solid var(--border);color:var(--wine);border-radius:10px;font-size:10.5px;font-weight:700;padding:1px 7px;margin-left:7px;vertical-align:1px}
+
+/* ===== Pagina giacenze ===== */
+.g-h1{font-family:'Cormorant Garamond',serif;font-size:1.7rem;font-weight:600;color:var(--wine);line-height:1.1}
+.g-sub{font-size:12.5px;color:var(--muted);margin-top:5px}
+.g-sub b{color:var(--ink)}
+.g-bar{display:flex;gap:10px;align-items:center;margin:14px 0 18px;flex-wrap:wrap}
+.g-chip{background:#fff;border:1px solid var(--border);border-radius:20px;padding:7px 14px;font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer;font-family:inherit}
+.g-chip.on{background:var(--wine);border-color:var(--wine);color:#fff}
+.g-exp{margin-left:auto;display:flex;gap:8px}
+.g-exp button{background:#fff;border:1px solid var(--border);color:var(--wine);border-radius:8px;padding:7px 13px;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer}
+.g-card{background:#fff;border:1px solid var(--border);border-radius:12px;margin-bottom:14px;overflow:hidden}
+.g-card-h{display:flex;justify-content:space-between;align-items:baseline;padding:12px 16px;background:linear-gradient(135deg,var(--wine),var(--wine-dark));color:#fff;gap:12px;flex-wrap:wrap}
+.g-ref{font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:600;letter-spacing:.5px}
+.g-tot{font-size:12px;color:var(--gold);font-weight:700}
+.g-card table{width:100%;border-collapse:collapse}
+.g-card th{text-align:left;font-size:9.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);padding:9px 16px;border-bottom:1px solid var(--border);background:#fcf9f9}
+.g-card td{padding:11px 16px;border-bottom:1px solid #f4eded;font-size:14px}
+.g-card tr:last-child td{border-bottom:none}
+.g-an{font-weight:700;font-size:15px}
+.g-fo{color:var(--muted);font-size:13px}
+.g-nota{display:block;font-size:10.5px;color:#a89698;margin-top:1px}
+.g-n1{font-weight:700;font-size:16px;color:var(--wine);font-variant-numeric:tabular-nums;text-align:right}
+.g-n2{font-weight:700;font-size:15px;color:#8a7a52;font-variant-numeric:tabular-nums;text-align:right}
+.g-zero{color:#cfc2c2;font-weight:400}
+.g-piede{font-size:11.5px;color:var(--muted);margin-top:10px;line-height:1.6}
+.g-avviso{display:flex;gap:12px;align-items:flex-start;background:linear-gradient(to right,#f9f3e4,#fdfafa);border:1px solid var(--border);border-left:3px solid var(--gold);border-radius:10px;padding:12px 16px;margin:14px 0 4px}
+.g-avviso-i{font-size:19px;line-height:1.1;flex:0 0 auto}
+.g-avviso-t{font-size:9px;color:var(--muted);font-weight:700;letter-spacing:1.2px;text-transform:uppercase;margin-bottom:2px}
+.g-avviso-x{font-size:12.5px;color:var(--amber);line-height:1.5;font-weight:600}
+@media (max-width:700px){
+  .tabs{padding:0 12px}
+  .tab{padding:12px 14px 10px;font-size:13px}
+  .g-h1{font-size:1.35rem}
+  .g-chip{padding:6px 12px;font-size:12px}
+  .g-exp{margin-left:0;width:100%;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .g-exp button{padding:11px}
+  .g-card-h{padding:11px 13px}.g-ref{font-size:1.15rem}.g-tot{font-size:11px}
+  .g-card thead{display:none}
+  .g-card table,.g-card tbody{display:block;width:100%}
+  .g-card tr{display:grid;grid-template-columns:1fr auto auto;grid-template-areas:'an n1 n2' 'fo n1 n2';
+     column-gap:16px;align-items:center;padding:10px 13px;border-bottom:1px solid #f4eded}
+  .g-card tr:last-child{border-bottom:none}
+  .g-card td{display:block;border:none;padding:0}
+  td.g-an{grid-area:an;font-size:16px}
+  td.g-fo{grid-area:fo;font-size:11.5px;margin-top:1px}
+  td.g-n1{grid-area:n1;font-size:18px;line-height:1.1}
+  td.g-n2{grid-area:n2;font-size:16px;line-height:1.1;min-width:52px}
+  td.g-n1:before{content:'Etich.';display:block;font-size:8.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);margin-bottom:1px}
+  td.g-n2:before{content:'Senza et.';display:block;font-size:8.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);margin-bottom:1px}
+}
+
 /* pannello esporta: fuori dalla media query perche' creato via JS solo su telefono */
 #m-export .m-dim{position:fixed;inset:0;background:rgba(26,16,18,0.45);z-index:2000}
 #m-export .m-sheet{position:fixed;left:0;right:0;bottom:0;background:white;border-radius:20px 20px 0 0;padding:8px 14px 24px;z-index:2001;box-shadow:0 -6px 24px rgba(0,0,0,0.18);max-height:86vh;overflow-y:auto}
@@ -453,6 +510,11 @@ tr.month-subrow .subrow-content{padding:10px 14px 12px}
     </div>
   </div>
   
+  <div class="tabs" id="app-tabs">
+    <button class="tab on" id="tab-report" onclick="setTabApp('report')">Report vendite</button>
+    <button class="tab" id="tab-giacenze" onclick="setTabApp('giacenze')">Giacenze <span class="n">3 referenze</span></button>
+  </div>
+
   <div class="filterbar">
     <div class="filter-group">
       <label>Vista</label>
@@ -515,6 +577,7 @@ tr.month-subrow .subrow-content{padding:10px 14px 12px}
   <div class="content">
     <div id="placeholder">Seleziona vista e periodo, poi clicca <strong>Genera Report</strong></div>
     <div id="report-wrapper" style="display:none"></div>
+    <div id="giac-wrapper" style="display:none"></div>
   </div>
 </div>
 
@@ -2186,6 +2249,293 @@ function mostraAltriOrdCliMobile() {
   window._mOrdCliLim = (window._mOrdCliLim || 8) + 10;
   var box = document.getElementById('m-ordcli');
   if (box) box.innerHTML = buildOrdiniClienteMobile();
+}
+
+
+// ===================== GIACENZE =====================
+// Foto di magazzino trascritta dalla stampa del gestionale.
+// Per ogni riga: [annata, capacita' in litri, etichettate, senza etichetta, nota]
+// Solo i due stati che servono: etichettato (codici C) e non etichettato (codici D).
+// Sur lattes e tiraggio sono esclusi di proposito: non sono vendibili.
+var GIAC_FOTO = '2026-11-13';
+var GIACENZE = []; // dati rimossi: ora sono cifrati
+
+var GIAC_FORMATO = { 0.75: 'Bottiglia 0,75', 1.5: 'Magnum 1,5', 3: 'Jeroboam 3' };
+var _giacFiltro = 'tutte';
+
+// Legge il codice articolo del gestionale e ne ricava referenza, annata,
+// stato e formato. Esempi: 3S22C0G, 3R19D0G, 3EB10C0GR, 3EB08D000G, 3EB12DJG.
+function parseCodGiacenza(cod) {
+  var c = String(cod || '').toUpperCase().trim();
+  var m = c.match(/^3(EB|R|S)(\d{2})(C|D)(0{1,3}G|MG|JG)(R?)$/);
+  if (!m) return null;
+  var ref = m[1] === 'EB' ? 'ebb' : (m[1] === 'R' ? 'parose' : 'saten');
+  var anno = 2000 + parseInt(m[2], 10);
+  var cap = m[4] === 'MG' ? 1.5 : (m[4] === 'JG' ? 3 : 0.75);
+  return { ref: ref, annata: anno, stato: m[3], capacita: cap };
+}
+
+// Giacenza netta = foto di magazzino meno le bottiglie uscite DOPO la data della foto.
+// Si usa D_ALL e non D: dal magazzino esce tutto, qualunque canale, omaggi compresi.
+function calcolaGiacenze() {
+  var usciti = {};
+  var nUscite = 0;
+  for (var i = 0; i < D_ALL.length; i++) {
+    var r = D_ALL[i];
+    if (r.tipoRiga !== 'Vendita') continue;
+    if (!r.dataISO || r.dataISO <= GIAC_FOTO) continue;
+    var p = parseCodGiacenza(r.codArt);
+    if (!p) continue;
+    var k = p.ref + '|' + p.annata + '|' + p.capacita + '|' + p.stato;
+    usciti[k] = (usciti[k] || 0) + r.pezzi;
+    nUscite += r.pezzi;
+  }
+
+  var out = [];
+  for (var t = 0; t < GIACENZE.length; t++) {
+    var ref = GIACENZE[t];
+    var righe = [], totE = 0, totN = 0;
+    for (var j = 0; j < ref.righe.length; j++) {
+      var g = ref.righe[j];
+      var base = ref.chiave + '|' + g[0] + '|' + g[1] + '|';
+      var et = g[2] - (usciti[base + 'C'] || 0);
+      var ne = g[3] - (usciti[base + 'D'] || 0);
+      if (et < 0) et = 0;
+      if (ne < 0) ne = 0;
+      righe.push({ annata: g[0], capacita: g[1], et: et, ne: ne, nota: g[4] });
+      totE += et; totN += ne;
+    }
+    out.push({ nome: ref.nome, chiave: ref.chiave, righe: righe, totE: totE, totN: totN });
+  }
+  return { referenze: out, uscite: nUscite };
+}
+
+// La foto di magazzino invecchia: ogni sboccatura sposta bottiglie dal sur lattes
+// alle etichettate, e quel movimento non passa dalle vendite, quindi l'app non lo
+// vede. Dopo un trimestre la base va rifatta, e il banner lo ricorda.
+var GIAC_GIORNI_AVVISO = 90;
+
+function giorniDallaFoto() {
+  var p = GIAC_FOTO.split('-');
+  var foto = new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
+  var oggi = new Date();
+  oggi = new Date(oggi.getFullYear(), oggi.getMonth(), oggi.getDate());
+  return Math.round((oggi - foto) / 86400000);
+}
+
+function bannerGiacenzeVecchia() {
+  var g = giorniDallaFoto();
+  if (g < GIAC_GIORNI_AVVISO) return '';
+  var mesi = Math.floor(g / 30);
+  var quanto = mesi >= 2 ? (mesi + ' mesi') : (g + ' giorni');
+  var h = '<div class="g-avviso"><div class="g-avviso-i">&#9888;</div><div>';
+  h += '<div class="g-avviso-t">Giacenza da aggiornare</div>';
+  h += '<div class="g-avviso-x">La foto di magazzino ha ' + quanto + ', dal ' + dataFotoIt() + '. ';
+  h += 'Le sboccature fatte da allora hanno aggiunto bottiglie etichettate che le vendite non registrano, ';
+  h += 'quindi questi numeri sono probabilmente piu\' bassi del reale. Chiedi una giacenza nuova.</div>';
+  h += '</div></div>';
+  return h;
+}
+
+function dataFotoIt() {
+  var p = GIAC_FOTO.split('-');
+  return p[2] + '/' + p[1] + '/' + p[0];
+}
+
+function renderGiacenze() {
+  var g = calcolaGiacenze();
+  var html = '<div class="g-h1">Giacenze</div>';
+  html += '<div class="g-sub">Foto di magazzino al <b>' + dataFotoIt() + '</b>';
+  if (g.uscite > 0) {
+    html += ' &middot; scalate <b>' + NUM(g.uscite) + '</b> bottiglie uscite dopo quella data';
+  } else {
+    html += ' &middot; il file vendite non supera questa data, quindi non c\'e\' ancora nulla da scalare';
+  }
+  html += '</div>';
+  html += bannerGiacenzeVecchia();
+
+  html += '<div class="g-bar">';
+  html += '<button class="g-chip' + (_giacFiltro === 'tutte' ? ' on' : '') + '" onclick="filtraGiacenze(\'tutte\')">Tutte</button>';
+  for (var i = 0; i < g.referenze.length; i++) {
+    var rf = g.referenze[i];
+    html += '<button class="g-chip' + (_giacFiltro === rf.chiave ? ' on' : '') + '" onclick="filtraGiacenze(\'' + rf.chiave + '\')">' + escapeHTML(rf.nome) + '</button>';
+  }
+  html += '<div class="g-exp"><button onclick="exportGiacenzePdf()">&#8681; PDF</button>';
+  html += '<button onclick="exportGiacenzeExcel()">&#8681; Excel</button></div></div>';
+
+  var totE = 0, totN = 0, mostrate = 0;
+  for (var i = 0; i < g.referenze.length; i++) {
+    var rf = g.referenze[i];
+    totE += rf.totE; totN += rf.totN;
+    if (_giacFiltro !== 'tutte' && _giacFiltro !== rf.chiave) continue;
+    mostrate++;
+    html += '<div class="g-card"><div class="g-card-h"><span class="g-ref">' + escapeHTML(rf.nome) + '</span>';
+    html += '<span class="g-tot">' + NUM(rf.totE) + ' etichettate &nbsp;&middot;&nbsp; ' + NUM(rf.totN) + ' senza etichetta</span></div>';
+    html += '<table><thead><tr><th>Annata</th><th>Formato</th><th style="text-align:right">Etichettate</th><th style="text-align:right">Senza etichetta</th></tr></thead><tbody>';
+    for (var j = 0; j < rf.righe.length; j++) {
+      var g2 = rf.righe[j];
+      html += '<tr><td class="g-an">' + g2.annata + '</td>';
+      html += '<td class="g-fo">' + GIAC_FORMATO[g2.capacita] + (g2.nota ? '<span class="g-nota">' + escapeHTML(g2.nota) + '</span>' : '') + '</td>';
+      html += '<td class="g-n1">' + (g2.et ? NUM(g2.et) : '<span class="g-zero">-</span>') + '</td>';
+      html += '<td class="g-n2">' + (g2.ne ? NUM(g2.ne) : '<span class="g-zero">-</span>') + '</td></tr>';
+    }
+    html += '</tbody></table></div>';
+  }
+
+  html += '<div class="g-piede">Totale sulle tre referenze: ' + NUM(totE) + ' bottiglie etichettate e ' + NUM(totN) + ' senza etichetta.<br>';
+  html += 'Sur lattes e tiraggio non sono conteggiati. Le riedizioni sono sommate alla loro annata, con la quantita\' indicata sotto il formato.</div>';
+
+  document.getElementById('giac-wrapper').innerHTML = html;
+}
+
+function filtraGiacenze(chiave) {
+  _giacFiltro = chiave;
+  renderGiacenze();
+  var c = document.querySelector('.content');
+  if (c) c.scrollTop = 0;
+}
+
+// Passaggio fra le due schede. La barra filtri e la ricerca servono solo al
+// report vendite, quindi sulla pagina giacenze spariscono.
+var _tabApp = 'report';
+function setTabApp(nome) {
+  if (nome === _tabApp) return;
+  _tabApp = nome;
+  var giac = (nome === 'giacenze');
+  var ids = ['app-tabs'];
+  document.getElementById('tab-report').className = 'tab' + (giac ? '' : ' on');
+  document.getElementById('tab-giacenze').className = 'tab' + (giac ? ' on' : '');
+
+  var filterbar = document.querySelector('#app-screen .filterbar');
+  var searchbar = document.querySelector('#app-screen .searchbar');
+  var sres = document.getElementById('search-results');
+  var banner = document.getElementById('data-info-banner');
+  var ph = document.getElementById('placeholder');
+  var rep = document.getElementById('report-wrapper');
+  var gw = document.getElementById('giac-wrapper');
+
+  if (giac) {
+    _tabStato = {
+      ph: ph ? ph.style.display : '',
+      rep: rep ? rep.style.display : '',
+      banner: banner ? banner.style.display : ''
+    };
+    if (filterbar) filterbar.style.display = 'none';
+    if (searchbar) searchbar.style.display = 'none';
+    if (sres) sres.style.display = 'none';
+    if (banner) banner.style.display = 'none';
+    if (ph) ph.style.display = 'none';
+    if (rep) rep.style.display = 'none';
+    gw.style.display = 'block';
+    renderGiacenze();
+  } else {
+    if (filterbar) filterbar.style.display = '';
+    if (searchbar) searchbar.style.display = '';
+    if (sres) sres.style.display = '';
+    if (banner) banner.style.display = _tabStato ? _tabStato.banner : '';
+    if (ph) ph.style.display = _tabStato ? _tabStato.ph : '';
+    if (rep) rep.style.display = _tabStato ? _tabStato.rep : '';
+    gw.style.display = 'none';
+  }
+  var c = document.querySelector('.content');
+  if (c) c.scrollTop = 0;
+}
+var _tabStato = null;
+
+function drawHeaderGiacenze(doc, pageW) {
+  doc.setFillColor(114, 47, 55);
+  doc.rect(0, 0, pageW, 24, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(15);
+  doc.setTextColor(255, 255, 255);
+  doc.text('Mosnel - Giacenze', 14, 12);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(201, 168, 76);
+  doc.text('Foto di magazzino al ' + dataFotoIt(), 14, 19);
+}
+
+function exportGiacenzePdf() {
+  var g = calcolaGiacenze();
+  var doc = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  var pageW = 210, margin = 14;
+  drawHeaderGiacenze(doc, pageW);
+
+  var y = 32;
+  for (var i = 0; i < g.referenze.length; i++) {
+    var rf = g.referenze[i];
+    if (_giacFiltro !== 'tutte' && _giacFiltro !== rf.chiave) continue;
+    var body = [];
+    for (var j = 0; j < rf.righe.length; j++) {
+      var r = rf.righe[j];
+      body.push([String(r.annata),
+                 GIAC_FORMATO[r.capacita] + (r.nota ? ' (' + r.nota + ')' : ''),
+                 r.et ? NUM(r.et) : '-',
+                 r.ne ? NUM(r.ne) : '-']);
+    }
+    body.push(['TOTALE', '', NUM(rf.totE), NUM(rf.totN)]);
+
+    if (y > 240) { doc.addPage('a4', 'portrait'); drawHeaderGiacenze(doc, pageW); y = 32; }
+    drawSectionTitle(doc, rf.nome, margin, y);
+    y += 6;
+
+    doc.autoTable({
+      startY: y,
+      head: [['Annata', 'Formato', 'Etichettate', 'Senza etichetta']],
+      body: body,
+      theme: 'grid',
+      styles: { font: 'helvetica', fontSize: 8.5, cellPadding: 1.8, overflow: 'ellipsize' },
+      headStyles: { fillColor: [114, 47, 55], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+      columnStyles: {
+        0: { cellWidth: 22, fontStyle: 'bold' },
+        1: { cellWidth: 78 },
+        2: { cellWidth: 40, halign: 'right' },
+        3: { cellWidth: 42, halign: 'right' }
+      },
+      margin: { left: margin, right: margin, top: 32 },
+      didParseCell: function(data) {
+        if (data.row.index === body.length - 1) {
+          data.cell.styles.fontStyle = 'bold';
+          data.cell.styles.fillColor = [250, 243, 243];
+        }
+      },
+      // La fascia bordeaux va ridisegnata anche sulle pagine che autoTable
+      // apre da sola, altrimenti dalla seconda in poi il PDF esce senza testata.
+      didDrawPage: function() { drawHeaderGiacenze(doc, pageW); }
+    });
+    y = doc.lastAutoTable.finalY + 10;
+  }
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(120, 107, 108);
+  if (y > 275) { doc.addPage('a4', 'portrait'); y = 20; }
+  doc.text('Sur lattes e tiraggio non sono conteggiati.', margin, y);
+  if (giorniDallaFoto() >= GIAC_GIORNI_AVVISO) {
+    doc.setTextColor(146, 64, 14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Attenzione: la foto di magazzino del ' + dataFotoIt() + ' ha piu\' di tre mesi, le sboccature successive non sono conteggiate.', margin, y + 5);
+  }
+
+  doc.save('Mosnel_Giacenze_' + GIAC_FOTO + '.pdf');
+}
+
+function exportGiacenzeExcel() {
+  var g = calcolaGiacenze();
+  var rows = [['Referenza', 'Annata', 'Formato', 'Etichettate', 'Senza etichetta', 'Nota']];
+  for (var i = 0; i < g.referenze.length; i++) {
+    var rf = g.referenze[i];
+    if (_giacFiltro !== 'tutte' && _giacFiltro !== rf.chiave) continue;
+    for (var j = 0; j < rf.righe.length; j++) {
+      var r = rf.righe[j];
+      rows.push([rf.nome, r.annata, GIAC_FORMATO[r.capacita], r.et, r.ne, r.nota || '']);
+    }
+  }
+  var wb = XLSX.utils.book_new();
+  var ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols'] = [{ wch: 12 }, { wch: 9 }, { wch: 18 }, { wch: 13 }, { wch: 16 }, { wch: 26 }];
+  XLSX.utils.book_append_sheet(wb, ws, 'Giacenze');
+  XLSX.writeFile(wb, 'Mosnel_Giacenze_' + GIAC_FOTO + '.xlsx');
 }
 
 function apriExportMobile() {
