@@ -946,7 +946,7 @@ function lockShowForm(mode, msg) {
   var setup = mode === 'setup';
   document.getElementById('lock-title').textContent = setup ? 'Crea una password' : 'Inserisci la password';
   document.getElementById('lock-text').textContent = setup
-    ? "Protegge l'app e i dati salvati su questo dispositivo. Usa almeno 8 caratteri. Se la dimentichi non si può recuperare: dovrai ricaricare il file Excel e sceglierne una nuova."
+    ? "Protegge l'app e i dati salvati su questo dispositivo. Usa almeno 6 caratteri. Se la dimentichi non si può recuperare: dovrai ricaricare il file Excel e sceglierne una nuova."
     : "L'app è protetta. Inserisci la password per aprire i dati.";
   document.getElementById('lock-pw').value = '';
   document.getElementById('lock-pw').setAttribute('autocomplete', setup ? 'new-password' : 'current-password');
@@ -992,7 +992,7 @@ function lockSubmit(e) {
   var btn = document.getElementById('lock-btn');
   err.textContent = '';
   if (lockMode === 'setup') {
-    if (pw.length < 8) { err.textContent = 'La password deve avere almeno 8 caratteri.'; return; }
+    if (pw.length < 6) { err.textContent = 'La password deve avere almeno 6 caratteri.'; return; }
     if (pw !== document.getElementById('lock-pw2').value) { err.textContent = 'Le due password non coincidono.'; return; }
   } else if (!pw) { err.textContent = 'Inserisci la password.'; return; }
   btn.disabled = true;
