@@ -2379,7 +2379,10 @@ function renderReportMobile(r) {
 
   html += '<div class="m-kgrid">';
   html += mKpi('Fatturato ' + r.anno, EUR0(r.d26.fatturato), mDelta(r.d26.fatturato - r.d25.fatturato, dF) + ' vs ' + EUR0(r.d25.fatturato));
-  html += mKpi('Bottiglie', NUM(r.d26.bottiglieEq), mDelta(r.d26.bottiglieEq - r.d25.bottiglieEq, dB) + ' vs ' + NUM(r.d25.bottiglieEq));
+  var diffB = r.d26.bottiglieEq - r.d25.bottiglieEq;
+  html += mKpi('Bottiglie', NUM(r.d26.bottiglieEq),
+    '<span class="' + (diffB >= 0 ? 'text-green' : 'text-red') + '" style="font-weight:700">' + NUMsign(diffB) + ' bt (' + PCTsign(dB) + ')</span>' +
+    '<br>vs ' + NUM(r.d25.bottiglieEq) + ' nel ' + r.annoP);
   html += mKpi('Prezzo medio', EUR(r.d26.pm), mDelta(r.d26.pm - r.d25.pm, dPM) + ' vs ' + EUR(r.d25.pm));
   var dOrdM = r.d25.ordini > 0 ? ((r.d26.ordini - r.d25.ordini) / r.d25.ordini) * 100 : 0;
   html += mKpi('Ordini', NUM(r.d26.ordini), mDelta(r.d26.ordini - r.d25.ordini, dOrdM) + ' vs ' + NUM(r.d25.ordini));
@@ -2486,7 +2489,7 @@ function buildClienteMobile(nome, agente, citta, prov, anno, annoP, f26, f25, b2
 
   var ultima = fattureArr.length ? fattureArr[0].data : '-';
   html += '<div class="m-mini">';
-  html += '<div class="m-mi"><div class="m-mi-l">Bottiglie</div><div class="m-mi-v">' + NUM(b26Eq) + '</div><div class="m-mi-s ' + (b26Eq - b25Eq >= 0 ? 'text-green' : 'text-red') + '">' + PCTsign(dB) + '</div></div>';
+  html += '<div class="m-mi"><div class="m-mi-l">Bottiglie</div><div class="m-mi-v">' + NUM(b26Eq) + '</div><div class="m-mi-s ' + (b26Eq - b25Eq >= 0 ? 'text-green' : 'text-red') + '" style="font-weight:700">' + NUMsign(b26Eq - b25Eq) + ' bt</div><div class="m-mi-s ' + (b26Eq - b25Eq >= 0 ? 'text-green' : 'text-red') + '">' + PCTsign(dB) + '</div></div>';
   html += '<div class="m-mi"><div class="m-mi-l">Prezzo medio</div><div class="m-mi-v">' + EUR(pm26) + '</div><div class="m-mi-s ' + (pm26 - pm25 >= 0 ? 'text-green' : 'text-red') + '">' + PCTsign(dPM) + '</div></div>';
   html += '<div class="m-mi"><div class="m-mi-l">Fatture</div><div class="m-mi-v">' + fattureArr.length + '</div><div class="m-mi-s">ult. ' + escapeHTML(ultima) + '</div></div>';
   html += '</div>';
